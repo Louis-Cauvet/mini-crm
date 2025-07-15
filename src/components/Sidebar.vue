@@ -11,7 +11,7 @@
     class="pa-0"
   >
     <v-container class="py-4 text-center">
-      <v-img :src="logo" max-width="70" class="mb-2 mx-auto" />
+      <v-img :src="logo" max-width="125" class="mb-2 mx-auto" />
     </v-container>
 
     <v-list nav density="compact">
