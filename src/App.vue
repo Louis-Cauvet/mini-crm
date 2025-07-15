@@ -1,11 +1,11 @@
 <template>
-  <v-app>
+  <v-app >
     <Sidebar />
     <v-main>
       <HeaderBar />
       <v-container fluid>
         <router-view />
-      </v-container>
+      </v-container> 
     </v-main>
   </v-app>
 </template>
