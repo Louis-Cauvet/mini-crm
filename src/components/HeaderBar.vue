@@ -1,5 +1,5 @@
 <template>
-  <v-app-bar flat>
+  <v-app-bar flat elevation="2">
     <v-btn icon @click="drawer = !drawer" class="d-md-none">
       <v-icon>mdi-menu</v-icon>
     </v-btn>

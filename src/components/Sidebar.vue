@@ -19,8 +19,8 @@
         <v-list-item-title class="text-body-1">Vue d'ensemble</v-list-item-title>
       </v-list-item>
 
-      <v-list-item to="/users" prepend-icon="mdi-account-group" active-class="border-right-active">
-        <v-list-item-title class="text-body-1">Utilisateurs</v-list-item-title>
+      <v-list-item to="/clients" prepend-icon="mdi-account-group" active-class="border-right-active">
+        <v-list-item-title class="text-body-1">Clients</v-list-item-title>
       </v-list-item>
 
       <v-list-item to="/articles" prepend-icon="mdi-file-document-outline" active-class="border-right-active">
