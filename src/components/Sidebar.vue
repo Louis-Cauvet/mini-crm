@@ -27,7 +27,7 @@
         <v-list-item-title class="text-body-1">Articles</v-list-item-title>
       </v-list-item>
 
-      <v-list-item to="/orders" prepend-icon="mdi-cart-outline" active-class="border-right-active">
+      <v-list-item to="/commandes" prepend-icon="mdi-cart-outline" active-class="border-right-active">
         <v-list-item-title class="text-body-1">Commandes</v-list-item-title>
       </v-list-item>
     </v-list>

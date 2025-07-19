@@ -195,6 +195,6 @@ function formatPhone(phone: string) {
 
 <style scoped>
 .action-buttons > *:not(:first-child) {
-  margin-left: 8px;
+  margin-left: 10px;
 }
 </style>

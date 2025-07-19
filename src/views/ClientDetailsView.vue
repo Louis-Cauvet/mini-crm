@@ -125,8 +125,4 @@ function confirmDelete() {
   showDeleteConfirm.value = false
   router.push('/clients')
 }
-
-function formatPhone(phone: string) {
-  return phone.replace(/\D/g, '').replace(/(\d{2})(?=\d)/g, '$1 ').trim()
-}
 </script>

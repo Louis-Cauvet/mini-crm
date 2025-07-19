@@ -5,7 +5,10 @@ const routes = [
     { path: '/clients', component: () => import('@/views/ClientsView.vue') },
     { path: '/clients/:id', name: 'ClientDetails', component: () => import('@/views/ClientDetailsView.vue'), props: true },
     { path: '/articles', component: () => import('@/views/ArticlesView.vue') },
-    { path: '/orders', component: () => import('@/views/OrdersView.vue') },
+    { path: '/commandes', component: () => import('@/views/OrdersView.vue') },
+    {
+        path: '/commandes/:id', name: 'OrderDetails', component: () => import('@/views/OrderDetailsView.vue'),
+    }
 ]
 
 const router = createRouter({
