@@ -151,7 +151,7 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 
-const statuses = ['Demandée', 'En préparation', 'Expédiée', 'Récupérée']
+const statuses = ['Demandée', 'En préparation', 'Expédiée', 'Récupérée', 'Annulée']
 
 const clients = [
   { id: 1, firstname: 'Louis', lastname: 'Cauvet', company: 'OpenAI', label: 'Louis Cauvet - OpenAI' },

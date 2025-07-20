@@ -14,24 +14,12 @@
       <v-card-actions>
         <v-row dense class="w-100 justify-end">
           <v-col cols="12" sm="auto">
-            <v-btn 
-              v-if="hasChanged" 
-              color="primary" 
-              variant="flat" 
-              block 
-              @click="saveChanges"
-            >
+            <v-btn v-if="hasChanged" color="primary" variant="flat" block @click="saveChanges">
               <v-icon start>mdi-content-save</v-icon> Enregistrer
             </v-btn>
           </v-col>
           <v-col cols="12" sm="auto">
-            <v-btn 
-              color="error" 
-              variant="flat" 
-              class="text-white" 
-              block 
-              @click="showDeleteConfirm = true"
-            >
+            <v-btn color="error" variant="flat" class="text-white" block @click="showDeleteConfirm = true">
               <v-icon start>mdi-delete</v-icon> Supprimer le client
             </v-btn>
           </v-col>
@@ -39,13 +27,18 @@
       </v-card-actions>
     </v-card>
 
-
     <h3 class="mt-6">Historique des commandes</h3>
     <v-data-table
       :items="orders"
       :headers="orderHeaders"
       no-data-text="Aucune commande trouvée"
-    />
+    >
+      <template #item.actions="{ item }">
+        <v-btn icon density="compact" color="info" :to="`/commandes/${item.id}`">
+          <v-icon size="18">mdi-eye</v-icon>
+        </v-btn>
+      </template>
+    </v-data-table>
 
     <v-dialog v-model="showDeleteConfirm" max-width="500">
       <v-card>
@@ -89,7 +82,8 @@ const editForm = ref()
 const orderHeaders = [
   { title: 'Numéro', key: 'number' },
   { title: 'Date', key: 'date' },
-  { title: 'Montant total', key: 'total' }
+  { title: 'Montant total', key: 'total' },
+  { title: '', key: 'actions', sortable: false, width: '60px' }
 ]
 
 onMounted(() => {
@@ -105,8 +99,8 @@ onMounted(() => {
   initialClient.value = { ...client.value }
 
   orders.value = [
-    { number: 1001, date: '01/07/2025', total: '120 €' },
-    { number: 1002, date: '15/07/2025', total: '340 €' }
+    { id: 1001, number: '1001', date: '01/07/2025', total: '120 €' },
+    { id: 1002, number: '1002', date: '15/07/2025', total: '340 €' }
   ]
 })
 

@@ -145,7 +145,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-const statuses = ['Demandée', 'En préparation', 'Expédiée', 'Récupérée']
+const statuses = ['Demandée', 'En préparation', 'Expédiée', 'Récupérée', "'Annulée'"]
 
 const clients = [
   { id: 1, firstname: 'Louis', lastname: 'Cauvet', company: 'OpenAI', label: 'Louis Cauvet - OpenAI' },

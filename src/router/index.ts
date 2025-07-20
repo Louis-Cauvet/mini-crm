@@ -8,7 +8,9 @@ const routes = [
     { path: '/commandes', component: () => import('@/views/OrdersView.vue') },
     {
         path: '/commandes/:id', name: 'OrderDetails', component: () => import('@/views/OrderDetailsView.vue'),
-    }
+    },
+    { path: '/connexion', component: () => import('@/views/auth/LoginView.vue') },
+    { path: '/enregistrement', component: () => import('@/views/auth/RegisterView.vue') }
 ]
 
 const router = createRouter({
