@@ -9,6 +9,8 @@ Backend API pour le système Mini CRM développé avec Node.js, Express, TypeScr
 - **TypeScript** - Typage statique
 - **MongoDB** - Base de données NoSQL
 - **Mongoose** - ODM pour MongoDB
+- **JWT** - Authentification par tokens
+- **bcryptjs** - Hashage des mots de passe
 
 ## 📦 Installation
 
@@ -30,6 +32,8 @@ Créer un fichier `.env` à la racine du projet avec les variables suivantes :
 PORT=3000
 MONGODB_URI=mongodb://localhost:27017/mini-crm
 FRONTEND_URL=http://localhost:5173
+JWT_SECRET=votre-secret-jwt-super-securise
+NODE_ENV=development
 ```
 
 ## 🏃‍♂️ Démarrage
@@ -52,22 +56,35 @@ npm run clean
 
 ```text
 src/
+├── middleware/      # Middlewares personnalisés
+│   └── auth.ts      # Middleware d'authentification
 ├── models/          # Modèles Mongoose
+│   ├── User.ts      # Modèle Utilisateur
 │   ├── Article.ts   # Modèle Article
 │   ├── Client.ts    # Modèle Client
 │   └── Order.ts     # Modèle Commande
 ├── routes/          # Routes Express
-│   ├── articles.ts  # Routes articles
-│   ├── clients.ts   # Routes clients
-│   └── orders.ts    # Routes commandes
+│   ├── auth.ts      # Routes d'authentification
+│   ├── articles.ts  # Routes articles (protégées)
+│   ├── clients.ts   # Routes clients (protégées)
+│   └── orders.ts    # Routes commandes (protégées)
 └── server.ts        # Point d'entrée
 ```
 
 ## 🛣️ API Endpoints
 
+### 🔐 Authentification (Routes publiques)
+
+- `POST /api/auth/register` - Créer un compte utilisateur
+- `POST /api/auth/login` - Se connecter
+- `POST /api/auth/logout` - Se déconnecter
+- `GET /api/auth/me` - Récupérer les infos utilisateur connecté
+
 ### Health Check
 
 - `GET /api/health` - Vérification du statut de l'API
+
+### 🔒 Routes Protégées (Authentification requise)
 
 ### Clients
 
@@ -94,6 +111,19 @@ src/
 - `DELETE /api/orders/:id` - Supprime une commande
 
 ## 📊 Modèles de données
+
+### Utilisateur
+
+```typescript
+{
+  nom: string;
+  prenom: string;
+  email: string; // unique
+  motDePasse: string; // hashé avec bcrypt
+  role: "admin" | "user";
+  dateCreation: Date;
+}
+```
 
 ### Client
 
@@ -142,24 +172,59 @@ src/
 }
 ```
 
+## 🔐 Authentification
+
+### Système de Tokens JWT
+
+- **Cookies HttpOnly** - Les tokens sont stockés dans des cookies sécurisés
+- **Expiration** - Tokens valides 7 jours
+- **Middleware** - Protection automatique des routes sensibles
+- **Rôles** - Support admin/user (extensible)
+
+### Utilisation
+
+```javascript
+// Connexion
+const response = await fetch("/api/auth/login", {
+  method: "POST",
+  credentials: "include", // Important pour les cookies
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, motDePasse }),
+});
+
+// Requêtes authentifiées
+const clients = await fetch("/api/clients", {
+  credentials: "include", // Le cookie sera envoyé automatiquement
+});
+```
+
 ## 🚦 Codes de réponse HTTP
 
 - `200` - Succès
 - `201` - Créé avec succès
 - `400` - Erreur de requête
+- `401` - Non authentifié
+- `403` - Accès refusé
 - `404` - Ressource non trouvée
 - `500` - Erreur serveur
 
 ## 🧪 Test de l'API
 
-Vous pouvez tester l'API avec des outils comme Postman, Insomnia ou curl :
-
 ```bash
-# Test de santé
-curl http://localhost:3000/api/health
+# Créer un compte
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"nom":"Doe","prenom":"John","email":"john@example.com","motDePasse":"password123"}' \
+  -c cookies.txt
 
-# Récupérer tous les clients
-curl http://localhost:3000/api/clients
+# Se connecter
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"john@example.com","motDePasse":"password123"}' \
+  -c cookies.txt
+
+# Utiliser les routes protégées
+curl http://localhost:3000/api/clients -b cookies.txt
 ```
 
 ## 👥 Auteurs

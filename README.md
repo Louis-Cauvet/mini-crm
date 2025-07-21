@@ -39,6 +39,9 @@ Un système de gestion de la relation client (CRM) développé avec Vue.js 3 et 
 
 - Pages de connexion et d'enregistrement
 - Interface responsive avec gestion des écrans mobiles
+- **Système JWT avec cookies sécurisés**
+- **Protection des routes API par middleware**
+- **Gestion des rôles utilisateur (admin/user)**
 
 ## 🛠️ Technologies Utilisées
 
@@ -60,6 +63,9 @@ Un système de gestion de la relation client (CRM) développé avec Vue.js 3 et 
 - **TypeScript** - Langage typé basé sur JavaScript
 - **MongoDB** - Base de données NoSQL
 - **Mongoose** - ODM pour MongoDB
+- **JWT** - Authentification par tokens
+- **bcryptjs** - Hashage des mots de passe
+- **cookie-parser** - Gestion des cookies
 
 ### Développement
 
@@ -68,7 +74,7 @@ Un système de gestion de la relation client (CRM) développé avec Vue.js 3 et 
 
 ## 📁 Structure du Projet
 
-```
+```text
 mini-crm/
 ├── api/                        # Backend Node.js avec Express
 │   ├── src/
@@ -261,9 +267,11 @@ Pinia est configuré comme store principal pour la gestion d'état (actuellement
 
 ### API Backend
 
-- Le dossier `api/` est prévu pour le développement du backend
-- Intégration avec une base de données
-- Authentification JWT
+- Le dossier `api/` contient le serveur complet
+- **Authentification JWT** avec cookies sécurisés
+- **Middleware de protection** des routes
+- **Hashage des mots de passe** avec bcryptjs
+- Intégration avec une base de données MongoDB
 - API REST pour toutes les opérations CRUD
 
 ### Fonctionnalités Prévues
@@ -306,3 +314,20 @@ Actuellement, les données sont stockées en local dans chaque composant avec de
 - Code splitting automatique
 
 Cette application constitue une base solide pour un CRM complet avec une interface moderne et une architecture évolutive.
+
+## 🔐 Sécurité
+
+### Authentification Robuste
+
+- **Tokens JWT** avec expiration (7 jours)
+- **Cookies HttpOnly** pour la sécurité
+- **Hashage bcrypt** des mots de passe (salt rounds: 10)
+- **Middleware d'authentification** sur toutes les routes sensibles
+- **Gestion des rôles** admin/user
+
+### Protection des Données
+
+- **Validation des entrées** côté serveur
+- **Sanitisation** automatique avec Mongoose
+- **Gestion des erreurs** sécurisée sans exposition d'informations sensibles
+- **Variables d'environnement** pour les secrets
