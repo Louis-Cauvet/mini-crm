@@ -14,7 +14,8 @@
     <v-data-table
       :items="articles"
       :headers="headers"
-      item-value="id"
+      :loading="loading"
+      item-value="_id"
       class="elevation-1"
       density="comfortable"
       no-data-text="Aucun article trouvé"
@@ -26,25 +27,33 @@
         </v-avatar>
       </template>
 
-      <template #item.price="{ item }">
-        {{ item.price }} €
-      </template>
+      <template #item.prix="{ item }"> {{ item.prix }} € </template>
 
-      <template #item.color="{ item }">
+      <template #item.couleur="{ item }">
         <v-chip
-          :style="`background-color: ${colorHex(item.color)}; color: white`"
+          :style="`background-color: ${colorHex(item.couleur)}; color: white`"
           small
         >
-          {{ colorLabel(item.color) }}
+          {{ colorLabel(item.couleur) }}
         </v-chip>
       </template>
 
       <template #item.actions="{ item }">
         <div class="action-buttons d-flex justify-end align-center gap-2">
-          <v-btn icon density="compact" color="primary" @click="editArticle(item)">
+          <v-btn
+            icon
+            density="compact"
+            color="primary"
+            @click="editArticle(item)"
+          >
             <v-icon size="18">mdi-pencil</v-icon>
           </v-btn>
-          <v-btn icon density="compact" color="error" @click="askDeleteArticle(item)">
+          <v-btn
+            icon
+            density="compact"
+            color="error"
+            @click="askDeleteArticle(item)"
+          >
             <v-icon size="18">mdi-delete</v-icon>
           </v-btn>
         </div>
@@ -53,15 +62,35 @@
 
     <v-dialog v-model="showAddArticle" max-width="700">
       <v-card>
-        <v-card-title>{{ editedArticle ? 'Modifier' : 'Ajouter' }} un article</v-card-title>
+        <v-card-title
+          >{{ editedArticle ? "Modifier" : "Ajouter" }} un article</v-card-title
+        >
 
         <v-card-text>
           <v-form ref="articleForm" v-model="formValid">
-            <v-text-field v-model="form.name" label="Nom de l'article" :rules="[v => !!v || 'Nom requis']" />
-            <v-text-field v-model="form.brand" label="Marque" :rules="[v => !!v || 'Marque requise']" />
-            <v-text-field v-model.number="form.price" label="Prix (€)" type="number" :rules="[v => v >= 0 || 'Prix invalide']" />
+            <v-text-field
+              v-model="form.nom"
+              label="Nom de l'article"
+              :rules="[(v) => !!v || 'Nom requis']"
+            />
+            <v-text-field
+              v-model="form.marque"
+              label="Marque"
+              :rules="[(v) => !!v || 'Marque requise']"
+            />
+            <v-text-field
+              v-model.number="form.prix"
+              label="Prix (€)"
+              type="number"
+              :rules="[(v) => v >= 0 || 'Prix invalide']"
+            />
 
-            <v-img v-if="form.image" :src="form.image" max-width="150" class="mb-2" />
+            <v-img
+              v-if="form.image"
+              :src="form.image"
+              max-width="150"
+              class="mb-2"
+            />
 
             <v-file-input
               v-model="selectedImage"
@@ -73,21 +102,28 @@
             />
 
             <v-select
-              v-model="form.color"
+              v-model="form.couleur"
               :items="availableColors"
               label="Couleur"
               item-title="label"
               item-value="value"
             />
             <v-textarea v-model="form.description" label="Description" />
-            <v-text-field v-model.number="form.stock" label="Stock disponible" type="number" :rules="[v => v >= 0 || 'Stock invalide']" />
+            <v-text-field
+              v-model.number="form.stock"
+              label="Stock disponible"
+              type="number"
+              :rules="[(v) => v >= 0 || 'Stock invalide']"
+            />
           </v-form>
         </v-card-text>
 
         <v-card-actions>
           <v-spacer />
           <v-btn @click="closeDialog">Annuler</v-btn>
-          <v-btn color="primary" @click="saveArticle">Enregistrer</v-btn>
+          <v-btn color="primary" @click="saveArticle" :loading="saving"
+            >Enregistrer</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -96,133 +132,201 @@
       <v-card>
         <v-card-title>Confirmer la suppression</v-card-title>
         <v-card-text>
-          Voulez-vous vraiment supprimer <strong>{{ articleToDelete?.name }}</strong> ?
+          Voulez-vous vraiment supprimer
+          <strong>{{ articleToDelete?.nom }}</strong> ?
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn @click="showDeleteConfirm = false">Annuler</v-btn>
-          <v-btn color="error" @click="confirmDeleteArticle">Supprimer</v-btn>
+          <v-btn color="error" @click="confirmDeleteArticle" :loading="deleting"
+            >Supprimer</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
+      {{ snackbarText }}
+    </v-snackbar>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from "vue";
+import { articleService, type Article } from "@/services/articles";
 
 const availableColors = [
-  { value: 'red', label: 'Rouge' },
-  { value: 'blue', label: 'Bleu' },
-  { value: 'green', label: 'Vert' },
-  { value: 'yellow', label: 'Jaune' },
-  { value: 'purple', label: 'Violet' },
-  { value: 'orange', label: 'Orange' },
-  { value: 'grey', label: 'Gris' },
-  { value: 'black', label: 'Noir' },
-  { value: 'white', label: 'Blanc' }
-]
+  { value: "red", label: "Rouge" },
+  { value: "blue", label: "Bleu" },
+  { value: "green", label: "Vert" },
+  { value: "yellow", label: "Jaune" },
+  { value: "purple", label: "Violet" },
+  { value: "orange", label: "Orange" },
+  { value: "grey", label: "Gris" },
+  { value: "black", label: "Noir" },
+  { value: "white", label: "Blanc" },
+];
 
 function colorLabel(value: string) {
-  return availableColors.find(c => c.value === value)?.label || value
+  return availableColors.find((c) => c.value === value)?.label || value;
 }
 
 function colorHex(value: string) {
   const map: Record<string, string> = {
-    red: '#e53935',
-    blue: '#1e88e5',
-    green: '#43a047',
-    yellow: '#fdd835',
-    purple: '#8e24aa',
-    orange: '#fb8c00',
-    grey: '#757575',
-    black: '#000000',
-    white: '#e0e0e0'
-  }
-  return map[value] || '#bdbdbd'
+    red: "#e53935",
+    blue: "#1e88e5",
+    green: "#43a047",
+    yellow: "#fdd835",
+    purple: "#8e24aa",
+    orange: "#fb8c00",
+    grey: "#757575",
+    black: "#000000",
+    white: "#e0e0e0",
+  };
+  return map[value] || "#bdbdbd";
 }
 
-const articles = ref([
-  { id: 1, name: 'Ordinateur Portable ProBook 450', brand: 'HP', price: 1299, image: 'https://picsum.photos/200', color: 'grey', description: 'Ordinateur professionnel.', stock: 12 },
-  { id: 2, name: 'Clé USB Ultra Fit 64Go', brand: 'SanDisk', price: 25, image: 'https://picsum.photos/201', color: 'red', description: 'Clé USB compacte.', stock: 100 },
-  { id: 3, name: 'Moniteur LED 27" UltraSharp', brand: 'Dell', price: 399, image: 'https://picsum.photos/205', color: 'black', description: 'Moniteur QHD design.', stock: 8 }
-])
+const articles = ref<Article[]>([]);
+const loading = ref(false);
+const saving = ref(false);
+const deleting = ref(false);
+const snackbar = ref(false);
+const snackbarText = ref("");
+const snackbarColor = ref("success");
 
 const headers = [
-  { title: 'Image', key: 'image', sortable: false, width: '80px' },
-  { title: 'Nom', key: 'name' },
-  { title: 'Marque', key: 'brand' },
-  { title: 'Prix', key: 'price' },
-  { title: 'Couleur', key: 'color' },
-  { title: 'Stock', key: 'stock' },
-  { title: '', key: 'actions', sortable: false, width: '100px' }
-]
+  { title: "Image", key: "image", sortable: false, width: "80px" },
+  { title: "Nom", key: "nom" },
+  { title: "Marque", key: "marque" },
+  { title: "Prix", key: "prix" },
+  { title: "Couleur", key: "couleur" },
+  { title: "Stock", key: "stock" },
+  { title: "", key: "actions", sortable: false, width: "100px" },
+];
 
-const showAddArticle = ref(false)
-const showDeleteConfirm = ref(false)
-const editedArticle = ref<any>(null)
-const articleToDelete = ref<any>(null)
-const formValid = ref(false)
-const articleForm = ref()
-const selectedImage = ref<File | null>(null)
+const showAddArticle = ref(false);
+const showDeleteConfirm = ref(false);
+const editedArticle = ref<Article | null>(null);
+const articleToDelete = ref<Article | null>(null);
+const formValid = ref(false);
+const articleForm = ref();
+const selectedImage = ref<File | null>(null);
 
 const form = ref({
-  name: '',
-  brand: '',
-  price: 0,
-  image: '',
-  color: '',
-  description: '',
-  stock: 0
-})
+  nom: "",
+  marque: "",
+  prix: 0,
+  image: "",
+  couleur: "",
+  description: "",
+  stock: 0,
+});
+
+onMounted(() => {
+  loadArticles();
+});
+
+async function loadArticles() {
+  try {
+    loading.value = true;
+    articles.value = await articleService.getArticles();
+  } catch (error) {
+    showSnackbar("Erreur lors du chargement des articles", "error");
+  } finally {
+    loading.value = false;
+  }
+}
 
 function onImageSelected() {
-  if (!selectedImage.value) return
-  const reader = new FileReader()
+  if (!selectedImage.value) return;
+  const reader = new FileReader();
   reader.onload = () => {
-    form.value.image = reader.result as string
+    form.value.image = reader.result as string;
+  };
+  reader.readAsDataURL(selectedImage.value);
+}
+
+function editArticle(article: Article) {
+  editedArticle.value = article;
+  form.value = {
+    nom: article.nom,
+    marque: article.marque,
+    prix: article.prix,
+    image: article.image || "",
+    couleur: article.couleur,
+    description: article.description,
+    stock: article.stock,
+  };
+  selectedImage.value = null;
+  showAddArticle.value = true;
+}
+
+function askDeleteArticle(article: Article) {
+  articleToDelete.value = article;
+  showDeleteConfirm.value = true;
+}
+
+async function confirmDeleteArticle() {
+  if (!articleToDelete.value?._id) return;
+
+  try {
+    deleting.value = true;
+    await articleService.deleteArticle(articleToDelete.value._id);
+    await loadArticles();
+    showSnackbar("Article supprimé avec succès");
+  } catch (error) {
+    showSnackbar("Erreur lors de la suppression", "error");
+  } finally {
+    deleting.value = false;
+    showDeleteConfirm.value = false;
+    articleToDelete.value = null;
   }
-  reader.readAsDataURL(selectedImage.value)
 }
 
-function editArticle(article: any) {
-  editedArticle.value = article
-  form.value = { ...article }
-  selectedImage.value = null
-  showAddArticle.value = true
-}
+async function saveArticle() {
+  articleForm.value?.validate();
+  if (!formValid.value) return;
 
-function askDeleteArticle(article: any) {
-  articleToDelete.value = article
-  showDeleteConfirm.value = true
-}
+  try {
+    saving.value = true;
 
-function confirmDeleteArticle() {
-  if (articleToDelete.value) {
-    articles.value = articles.value.filter(a => a.id !== articleToDelete.value.id)
+    if (editedArticle.value?._id) {
+      await articleService.updateArticle(editedArticle.value._id, form.value);
+      showSnackbar("Article modifié avec succès");
+    } else {
+      await articleService.createArticle(form.value);
+      showSnackbar("Article créé avec succès");
+    }
+
+    await loadArticles();
+    closeDialog();
+  } catch (error) {
+    showSnackbar("Erreur lors de l'enregistrement", "error");
+  } finally {
+    saving.value = false;
   }
-  showDeleteConfirm.value = false
-  articleToDelete.value = null
-}
-
-function saveArticle() {
-  articleForm.value?.validate()
-  if (!formValid.value) return
-
-  if (editedArticle.value) {
-    Object.assign(editedArticle.value, { ...form.value })
-  } else {
-    articles.value.push({ id: Date.now(), ...form.value })
-  }
-  closeDialog()
 }
 
 function closeDialog() {
-  showAddArticle.value = false
-  editedArticle.value = null
-  selectedImage.value = null
-  form.value = { name: '', brand: '', price: 0, image: '', color: '', description: '', stock: 0 }
-  articleForm.value?.resetValidation()
+  showAddArticle.value = false;
+  editedArticle.value = null;
+  selectedImage.value = null;
+  form.value = {
+    nom: "",
+    marque: "",
+    prix: 0,
+    image: "",
+    couleur: "",
+    description: "",
+    stock: 0,
+  };
+  articleForm.value?.resetValidation();
+}
+
+function showSnackbar(text: string, color: string = "success") {
+  snackbarText.value = text;
+  snackbarColor.value = color;
+  snackbar.value = true;
 }
 </script>
 
