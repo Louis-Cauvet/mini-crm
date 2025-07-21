@@ -52,6 +52,63 @@ npm start
 npm run clean
 ```
 
+## 🗄️ Données de test
+
+### Peupler la base de données
+
+Pour faciliter le développement et les tests, un script de seed est disponible pour remplir la base de données avec des données de test :
+
+```bash
+# En mode développement
+npm run seed
+
+# En production (après build)
+npm run build
+npm run seed:prod
+```
+
+### Données générées
+
+Le script crée :
+
+- **3 utilisateurs** avec différents rôles
+- **5 clients** avec des informations complètes
+- **10 articles** variés (informatique, téléphones, accessoires)
+- **5 commandes** avec différents statuts
+
+### Comptes de test
+
+Après le seeding, vous pouvez vous connecter avec :
+
+| Rôle  | Email                     | Mot de passe | Description           |
+| ----- | ------------------------- | ------------ | --------------------- |
+| Admin | `admin@minicrm.com`       | `admin123`   | Compte administrateur |
+| User  | `user@minicrm.com`        | `user123`    | Utilisateur standard  |
+| User  | `paul.ageron@minicrm.com` | `paul123`    | Utilisateur de test   |
+
+### Données d'exemple
+
+**Clients :**
+
+- Louis Cauvet (OpenAI) - Paris
+- Emma Dubois (TechCorp) - Lyon
+- Paul Martin (StartupX) - Toulouse
+- Sophie Leroy (InnovTech) - Bordeaux
+- Thomas Moreau (DigitalCorp) - Marseille
+
+**Articles :**
+
+- MacBook Pro 16", iPhone 15 Pro, Samsung Galaxy S24
+- Dell XPS 13, iPad Air, AirPods Pro
+- Moniteur 4K, Clavier mécanique, Souris gaming
+- Disque SSD 1To
+
+**Commandes :**
+
+- Commandes avec différents statuts (Demandée, En préparation, Expédiée, Récupérée)
+- Montants variés de 1 246€ à 2 778€
+- Dates échelonnées sur novembre-décembre 2024
+
 ## 📁 Structure du projet
 
 ```text
@@ -226,6 +283,25 @@ curl -X POST http://localhost:3000/api/auth/login \
 # Utiliser les routes protégées
 curl http://localhost:3000/api/clients -b cookies.txt
 ```
+
+## 🚀 Démarrage rapide
+
+```bash
+# 1. Installer les dépendances
+npm install
+
+# 2. Configurer l'environnement
+cp .env.example .env
+# Éditer le fichier .env avec vos paramètres
+
+# 3. Peupler la base de données
+npm run seed
+
+# 4. Démarrer le serveur
+npm run dev
+```
+
+L'API sera disponible sur `http://localhost:3000` avec des données de test prêtes à utiliser !
 
 ## 👥 Auteurs
 
