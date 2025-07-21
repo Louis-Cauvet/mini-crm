@@ -1,7 +1,8 @@
 <template>
   <!-- Permanent sur mdAndUp, temporaire sinon -->
   <v-navigation-drawer
-    v-model="drawer"
+    :model-value="drawer"
+    @update:model-value="$emit('update:drawer', $event)"
     app
     :permanent="$vuetify.display.mdAndUp"
     temporary
@@ -15,19 +16,37 @@
     </v-container>
 
     <v-list nav density="compact">
-      <v-list-item to="/" prepend-icon="mdi-view-dashboard" active-class="border-right-active">
-        <v-list-item-title class="text-body-1">Vue d'ensemble</v-list-item-title>
+      <v-list-item
+        to="/"
+        prepend-icon="mdi-view-dashboard"
+        active-class="border-right-active"
+      >
+        <v-list-item-title class="text-body-1"
+          >Vue d'ensemble</v-list-item-title
+        >
       </v-list-item>
 
-      <v-list-item to="/clients" prepend-icon="mdi-account-group" active-class="border-right-active">
+      <v-list-item
+        to="/clients"
+        prepend-icon="mdi-account-group"
+        active-class="border-right-active"
+      >
         <v-list-item-title class="text-body-1">Clients</v-list-item-title>
       </v-list-item>
 
-      <v-list-item to="/articles" prepend-icon="mdi-file-document-outline" active-class="border-right-active">
+      <v-list-item
+        to="/articles"
+        prepend-icon="mdi-file-document-outline"
+        active-class="border-right-active"
+      >
         <v-list-item-title class="text-body-1">Articles</v-list-item-title>
       </v-list-item>
 
-      <v-list-item to="/commandes" prepend-icon="mdi-cart-outline" active-class="border-right-active">
+      <v-list-item
+        to="/commandes"
+        prepend-icon="mdi-cart-outline"
+        active-class="border-right-active"
+      >
         <v-list-item-title class="text-body-1">Commandes</v-list-item-title>
       </v-list-item>
     </v-list>
@@ -35,21 +54,30 @@
 </template>
 
 <script setup lang="ts">
-import { inject, watch } from 'vue'
-import { useDisplay } from 'vuetify'
-import logo from '@/assets/logo.png'
+import { watch } from "vue";
+import { useDisplay } from "vuetify";
+import logo from "@/assets/logo.png";
 
-const drawer = inject('drawer')
-const display = useDisplay()
+defineProps<{
+  drawer: boolean;
+}>();
+
+const emit = defineEmits<{
+  "update:drawer": [value: boolean];
+}>();
+
+const display = useDisplay();
 
 // Ouvre le drawer automatiquement si écran desktop
 watch(
   () => display.mdAndUp.value,
   (isDesktop) => {
-    if (isDesktop) drawer.value = true
+    if (isDesktop) {
+      emit("update:drawer", true);
+    }
   },
   { immediate: true }
-)
+);
 </script>
 
 <style scoped>
