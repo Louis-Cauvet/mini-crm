@@ -8,15 +8,15 @@
           <v-divider class="my-2" />
           <v-card-subtitle class="pa-0">Clients récents :</v-card-subtitle>
           <v-list density="compact">
-            <v-list-item v-for="client in clients.slice(0, 3)" :key="client.id">
+            <v-list-item v-for="client in clients.slice(0, 3)" :key="client._id">
               <v-list-item-title>
-                {{ client.firstname }} {{ client.lastname }} - {{ client.company }}
+                {{ client.prenom }} {{ client.nom }}
               </v-list-item-title>
               <v-list-item-subtitle class="wrap-subtitle">
-                {{ client.email }} — {{ formatPhone(client.phone) }}
+                {{ client.email }} — {{ formatPhone(client.telephone) }}
               </v-list-item-subtitle>
               <template #append>
-                <v-btn icon density="compact" color="info" :to="`/clients/${client.id}`">
+                <v-btn icon density="compact" color="info" :to="`/clients/${client._id}`">
                   <v-icon size="20">mdi-eye</v-icon>
                 </v-btn>
               </template>
@@ -35,10 +35,10 @@
           <v-divider class="my-2" />
           <v-card-subtitle class="pa-0">Articles récents :</v-card-subtitle>
           <v-list density="compact">
-            <v-list-item v-for="article in articles.slice(0, 3)" :key="article.id">
-              <v-list-item-title>{{ article.name }}</v-list-item-title>
+            <v-list-item v-for="article in articles.slice(0, 3)" :key="article._id">
+              <v-list-item-title>{{ article.nom }}</v-list-item-title>
               <v-list-item-subtitle class="wrap-subtitle">
-                {{ article.brand }} — {{ article.price }} €
+                {{ article.marque }} — {{ article.prix }} €
               </v-list-item-subtitle>
               <template #append>
                 <v-chip size="small" color="primary" text-color="white">
@@ -60,15 +60,15 @@
           <v-divider class="my-2" />
           <v-card-subtitle class="pa-0">Commandes récentes :</v-card-subtitle>
           <v-list density="compact">
-            <v-list-item v-for="order in orders.slice(0, 3)" :key="order.id">
+            <v-list-item v-for="order in orders.slice(0, 3)" :key="order._id">
               <v-list-item-title>
-                {{ formatOrderNumber(order.id) }} — {{ getClientName(order.clientId) }}
+                {{ formatOrderNumber(order._id) }} — {{ order.client.prenom }} {{ order.client.nom }}
               </v-list-item-title>
               <v-list-item-subtitle class="wrap-subtitle">
-                {{ order.date }} — {{ order.amount }} €
+                {{ formatDate(order.dateCommande) }} — {{ order.montantTotal }} €
               </v-list-item-subtitle>
               <template #append>
-                <v-btn icon density="compact" color="info" :to="`/commandes/${order.id}`">
+                <v-btn icon density="compact" color="info" :to="`/commandes/${order._id}`">
                   <v-icon size="20">mdi-eye</v-icon>
                 </v-btn>
               </template>
@@ -110,33 +110,30 @@
 <script setup lang="ts">
 import { Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import { clientService, type Client } from '@/services/clients'
+import { articleService, type Article } from '@/services/articles'
+import { orderService, type Order } from '@/services/orders'
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement)
 
-const clients = [
-  { id: 1, firstname: 'Louis', lastname: 'Cauvet', company: 'OpenAI', email: 'louis@mail.com', phone: '0601020304' },
-  { id: 2, firstname: 'Emma', lastname: 'Dubois', company: 'TechCorp', email: 'emma@mail.com', phone: '0605060708' },
-  { id: 3, firstname: 'Paul', lastname: 'Martin', company: 'StartUpX', email: 'paul@mail.com', phone: '0611223344' }
-]
+const clients = ref<Client[]>([])
+const articles = ref<Article[]>([])
+const orders = ref<Order[]>([])
 
-const articles = [
-  { id: 1, name: 'Ordinateur Portable', price: 1200, stock: 10, brand: 'HP', color: 'Gris' },
-  { id: 2, name: 'Clé USB 64Go', price: 20, stock: 50, brand: 'SanDisk', color: 'Rouge' },
-  { id: 3, name: 'Ecran 27"', price: 250, stock: 5, brand: 'Dell', color: 'Noir' }
-]
-
-const orders = [
-  { id: 102, clientId: 1, date: '15/07/2025', amount: 0, productsList: [{ id: 1, qty: 1 }, { id: 2, qty: 3 }] },
-  { id: 101, clientId: 2, date: '14/07/2025', amount: 0, productsList: [{ id: 1, qty: 2 }, { id: 3, qty: 1 }] },
-  { id: 100, clientId: 3, date: '13/07/2025', amount: 0, productsList: [{ id: 2, qty: 5 }, { id: 3, qty: 2 }] }
-]
-
-orders.forEach(order => {
-  order.amount = order.productsList.reduce((total, p) => {
-    const product = articles.find(a => a.id === p.id)
-    return total + (product ? product.price * p.qty : 0)
-  }, 0)
+onMounted(async () => {
+  try {
+    const [clientsData, articlesData, ordersData] = await Promise.all([
+      clientService.getClients(),
+      articleService.getArticles(),
+      orderService.getOrders()
+    ])
+    clients.value = clientsData
+    articles.value = articlesData
+    orders.value = ordersData
+  } catch (error) {
+    console.error('Erreur lors du chargement des données:', error)
+  }
 })
 
 const colors = [
@@ -144,13 +141,12 @@ const colors = [
   '#FF9F40', '#8BC34A', '#E91E63', '#795548', '#2196F3' 
 ]
 
-function formatOrderNumber(id: number) {
-  return 'CMD' + String(id).padStart(3, '0')
+function formatOrderNumber(id: string) {
+  return 'CMD' + id.slice(-3).toUpperCase()
 }
 
-function getClientName(clientId: number) {
-  const client = clients.find(c => c.id === clientId)
-  return client ? `${client.firstname} ${client.lastname}` : 'Client inconnu'
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('fr-FR')
 }
 
 function formatPhone(phone: string) {
@@ -158,12 +154,12 @@ function formatPhone(phone: string) {
 } 
 
 const soldQtyData = computed(() => {
-  const dataArray = articles.map(a => {
-    const qty = orders.reduce((sum, o) => {
-      return sum + o.productsList.filter(p => p.id === a.id).reduce((q, p) => q + p.qty, 0)
+  const dataArray = articles.value.map(a => {
+    const qty = orders.value.reduce((sum, o) => {
+      return sum + o.articles.filter(item => item.article._id === a._id).reduce((q, item) => q + item.quantite, 0)
     }, 0)
-    return { label: a.name, value: qty }
-  }).sort((a, b) => b.value - a.value)
+    return { label: a.nom, value: qty }
+  }).filter(d => d.value > 0).sort((a, b) => b.value - a.value)
 
   return {
     labels: dataArray.map(d => d.label),
@@ -175,12 +171,12 @@ const soldQtyData = computed(() => {
 })
 
 const soldAmountData = computed(() => {
-  const dataArray = articles.map(a => {
-    const amount = orders.reduce((sum, o) => {
-      return sum + o.productsList.filter(p => p.id === a.id).reduce((amt, p) => amt + p.qty * a.price, 0)
+  const dataArray = articles.value.map(a => {
+    const amount = orders.value.reduce((sum, o) => {
+      return sum + o.articles.filter(item => item.article._id === a._id).reduce((amt, item) => amt + item.quantite * item.prixUnitaire, 0)
     }, 0)
-    return { label: a.name, value: amount }
-  }).sort((a, b) => b.value - a.value)
+    return { label: a.nom, value: amount }
+  }).filter(d => d.value > 0).sort((a, b) => b.value - a.value)
 
   return {
     labels: dataArray.map(d => d.label),
@@ -199,7 +195,6 @@ const totalSoldAmount = computed(() => {
   return soldAmountData.value.datasets[0].data.reduce((sum, val) => sum + val, 0)
 })
 </script>
-
 
 <style scoped>
 .wrap-subtitle {
