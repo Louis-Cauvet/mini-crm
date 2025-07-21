@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
+import { auth } from "../middleware/auth";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret";
@@ -110,33 +111,22 @@ router.post("/logout", (req, res) => {
 });
 
 // GET /api/auth/me
-router.get("/me", async (req, res) => {
+router.get("/me", auth, async (req: any, res) => {
   try {
-    const token = req.cookies.token;
-
-    if (!token) {
-      return res.status(401).json({ message: "Non authentifié" });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const user = await User.findById(decoded.userId).select("-motDePasse");
-
-    if (!user) {
-      return res.status(401).json({ message: "Utilisateur non trouvé" });
-    }
-
     res.json({
       user: {
-        id: user._id,
-        nom: user.nom,
-        prenom: user.prenom,
-        email: user.email,
-        role: user.role,
+        id: req.user._id,
+        nom: req.user.nom,
+        prenom: req.user.prenom,
+        email: req.user.email,
+        role: req.user.role,
       },
     });
-  } catch {
-    res.status(401).json({ message: "Token invalide" });
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'utilisateur:", error);
+    res.status(500).json({ message: "Erreur serveur" });
   }
 });
 
 export default router;
+

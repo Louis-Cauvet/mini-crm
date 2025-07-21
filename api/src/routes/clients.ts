@@ -1,7 +1,11 @@
 import express from "express";
 import Client from "../models/Client";
+import { auth } from "../middleware/auth";
 
 const router = express.Router();
+
+// Apply auth middleware to all routes
+router.use(auth);
 
 // GET /api/clients
 router.get("/", async (req, res) => {

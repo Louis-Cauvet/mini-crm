@@ -1,7 +1,11 @@
 import express from "express";
 import Article from "../models/Article";
+import { auth } from "../middleware/auth";
 
 const router = express.Router();
+
+// Apply auth middleware to all routes
+router.use(auth);
 
 // GET /api/articles
 router.get("/", async (req, res) => {

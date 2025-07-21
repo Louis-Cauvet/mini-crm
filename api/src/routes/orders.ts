@@ -1,7 +1,11 @@
 import express from "express";
 import Order from "../models/Order";
+import { auth } from "../middleware/auth";
 
 const router = express.Router();
+
+// Apply auth middleware to all routes
+router.use(auth);
 
 // GET /api/orders
 router.get("/", async (req, res) => {
