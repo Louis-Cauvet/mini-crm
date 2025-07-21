@@ -1,6 +1,6 @@
 # Mini CRM
 
-Un système de gestion de la relation client (CRM) développé avec Vue.js 3 et TypeScript, utilisant Vuetify comme framework UI.
+Un système de gestion de la relation client (CRM) développé avec Vue.js 3 et TypeScript, utilisant Vuetify comme framework UI, avec un backend Node.js, Express et MongoDB.
 
 ## 🚀 Fonctionnalités
 
@@ -53,6 +53,14 @@ Un système de gestion de la relation client (CRM) développé avec Vue.js 3 et 
 - **Chart.js & Vue-ChartJS** - Bibliothèque de graphiques
 - **Axios** - Client HTTP
 
+### Backend
+
+- **Node.js** - Runtime JavaScript
+- **Express** - Framework web pour Node.js
+- **TypeScript** - Langage typé basé sur JavaScript
+- **MongoDB** - Base de données NoSQL
+- **Mongoose** - ODM pour MongoDB
+
 ### Développement
 
 - **Vue TSC** - Compilateur TypeScript pour Vue
@@ -62,7 +70,20 @@ Un système de gestion de la relation client (CRM) développé avec Vue.js 3 et 
 
 ```
 mini-crm/
-├── api/                        # Dossier API (vide actuellement)
+├── api/                        # Backend Node.js avec Express
+│   ├── src/
+│   │   ├── models/            # Modèles Mongoose
+│   │   │   ├── Client.ts      # Modèle Client
+│   │   │   ├── Article.ts     # Modèle Article
+│   │   │   └── Order.ts       # Modèle Commande
+│   │   ├── routes/            # Routes API
+│   │   │   ├── clients.ts     # Routes clients
+│   │   │   ├── articles.ts    # Routes articles
+│   │   │   └── orders.ts      # Routes commandes
+│   │   └── server.ts          # Serveur Express principal
+│   ├── .env                   # Variables d'environnement
+│   ├── package.json
+│   └── tsconfig.json
 └── front/                      # Application frontend Vue.js
     ├── public/                 # Fichiers statiques
     ├── src/
@@ -97,71 +118,102 @@ mini-crm/
 ### Prérequis
 
 - Node.js (version 16 ou supérieure)
+- MongoDB (local ou cloud)
 - PNPM (gestionnaire de paquets recommandé)
 
 ### Installation
 
 1. **Cloner le repository :**
 
-    ```bash
-    git clone https://github.com/Louis-Cauvet/mini-crm.git
-    cd mini-crm
-    ```
+   ```bash
+   git clone https://github.com/Louis-Cauvet/mini-crm.git
+   cd mini-crm
+   ```
 
-2. **Installer les dépendances :**
+2. **Installer les dépendances du backend :**
 
-    ```bash
-    cd front
-    pnpm install
-    ```
+   ```bash
+   cd api
+   npm install
+   ```
+
+3. **Configurer l'environnement :**
+
+   Créer un fichier `.env` dans le dossier `api/` et configurer :
+
+   ```env
+   MONGODB_URI=mongodb://localhost:27017/mini-crm
+   PORT=3000
+   FRONTEND_URL=http://localhost:5173
+   ```
+
+4. **Installer les dépendances du frontend :**
+
+   ```bash
+   cd ../front
+   pnpm install
+   ```
 
 ### Scripts disponibles
 
+**Backend :**
+
 ```bash
+cd api
+
+# Lancement en mode développement
+npm run dev
+
+# Build de production
+npm run build
+
+# Lancement de production
+npm start
+```
+
+**Frontend :**
+
+```bash
+cd front
+
 # Lancement en mode développement
 pnpm dev
 
 # Build de production
 pnpm build
 
-# Prévisualisation du build de production
+# Prévisualisation du build
 pnpm preview
 ```
 
-L'application sera accessible sur `http://localhost:5173` par défaut.
+- **Backend API** : `http://localhost:3000`
+- **Frontend** : `http://localhost:5173`
 
-## 📱 Interface Utilisateur
+## 🔌 API Endpoints
 
-### Navigation
+### Clients
 
-- **Menu latéral** : Navigation principale entre les sections
-- **Header** : Informations utilisateur et déconnexion
-- **Responsive** : Interface adaptée mobile et desktop
+- `GET /api/clients` - Liste des clients
+- `GET /api/clients/:id` - Détails d'un client
+- `POST /api/clients` - Créer un client
+- `PUT /api/clients/:id` - Modifier un client
+- `DELETE /api/clients/:id` - Supprimer un client
 
-### Pages principales
+### Articles
 
-1. **Dashboard (/)**
+- `GET /api/articles` - Liste des articles
+- `GET /api/articles/:id` - Détails d'un article
+- `POST /api/articles` - Créer un article
+- `PUT /api/articles/:id` - Modifier un article
+- `DELETE /api/articles/:id` - Supprimer un article
 
-   - Résumé des clients, articles et commandes
-   - Graphiques des ventes et chiffre d'affaires
+### Commandes
 
-2. **Clients (/clients)**
-
-   - Liste paginée des clients
-   - Actions : Voir, Modifier, Supprimer
-
-3. **Articles (/articles)**
-
-   - Catalogue avec images et informations
-   - Gestion du stock et des couleurs
-
-4. **Commandes (/commandes)**
-
-   - Liste des commandes avec statuts
-   - Gestion complète des commandes
-
-5. **Authentification (/connexion, /enregistrement)**
-   - Formulaires de connexion et inscription
+- `GET /api/orders` - Liste des commandes
+- `GET /api/orders/:id` - Détails d'une commande
+- `POST /api/orders` - Créer une commande
+- `PUT /api/orders/:id` - Modifier une commande
+- `DELETE /api/orders/:id` - Supprimer une commande
 
 ## 🎨 Design et UX
 
