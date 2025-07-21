@@ -14,13 +14,20 @@
     <v-data-table
       :items="users"
       :headers="headers"
-      item-value="id"
+      item-value="_id"
       class="elevation-1"
       density="comfortable"
       no-data-text="Aucun utilisateur trouvé"
+      :loading="loading"
     >
       <template #item.phone="{ item }">
-        {{ formatPhone(item.phone) }}
+        {{ formatPhone(item.telephone) }}
+      </template>
+
+      <template #item.address="{ item }">
+        {{
+          `${item.adresse.rue}, ${item.adresse.ville} ${item.adresse.codePostal}`
+        }}
       </template>
 
       <template #item.actions="{ item }">
@@ -28,56 +35,77 @@
           <v-btn icon density="compact" color="primary" @click="editUser(item)">
             <v-icon size="18">mdi-pencil</v-icon>
           </v-btn>
-          <v-btn icon density="compact" color="error" @click="askDeleteUser(item)">
+          <v-btn
+            icon
+            density="compact"
+            color="error"
+            @click="askDeleteUser(item)"
+          >
             <v-icon size="18">mdi-delete</v-icon>
           </v-btn>
-          <v-btn icon density="compact" color="info" :to="`/clients/${item.id}`">
+          <v-btn
+            icon
+            density="compact"
+            color="info"
+            :to="`/clients/${item._id}`"
+          >
             <v-icon size="18">mdi-eye</v-icon>
           </v-btn>
         </div>
       </template>
     </v-data-table>
 
-  
     <v-dialog v-model="showAddUser" max-width="700">
       <v-card>
         <v-card-title>
-          {{ editedUser ? 'Modifier' : 'Ajouter' }} un client
+          {{ editedUser ? "Modifier" : "Ajouter" }} un client
         </v-card-title>
 
         <v-card-text>
           <v-form ref="userForm" v-model="formValid">
             <v-text-field
-              v-model="form.firstname"
+              v-model="form.prenom"
               label="Prénom"
-              :rules="[v => !!v || 'Le prénom est requis']"
+              :rules="[(v) => !!v || 'Le prénom est requis']"
             />
             <v-text-field
-              v-model="form.lastname"
+              v-model="form.nom"
               label="Nom"
-              :rules="[v => !!v || 'Le nom est requis']"
-            />
-            <v-text-field
-              v-model="form.company"
-              label="Société"
-              :rules="[v => !!v || 'La société est requise']"
+              :rules="[(v) => !!v || 'Le nom est requis']"
             />
             <v-text-field
               v-model="form.email"
               label="Email"
               :rules="[
-                v => !!v || 'L\'email est requis',
-                v => /.+@.+\..+/.test(v) || 'Email invalide'
+                (v) => !!v || 'L\'email est requis',
+                (v) => /.+@.+\..+/.test(v) || 'Email invalide',
               ]"
             />
             <v-text-field
-              v-model="form.phone"
+              v-model="form.telephone"
               label="Téléphone"
-              @blur="form.phone = formatPhone(form.phone)"
+              @blur="form.telephone = formatPhone(form.telephone)"
               :rules="[
-                v => !!v || 'Le téléphone est requis',
-                v => /^\d{10}$/.test(v.replace(/\s/g, '')) || 'Numéro invalide (10 chiffres)'
+                (v) => !!v || 'Le téléphone est requis',
+                (v) =>
+                  /^\d{10}$/.test(v.replace(/\s/g, '')) ||
+                  'Numéro invalide (10 chiffres)',
               ]"
+            />
+            <v-text-field
+              v-model="form.adresse.rue"
+              label="Rue"
+              :rules="[(v) => !!v || 'La rue est requise']"
+            />
+            <v-text-field
+              v-model="form.adresse.ville"
+              label="Ville"
+              :rules="[(v) => !!v || 'La ville est requise']"
+            />
+            <v-text-field
+              v-model="form.adresse.codePostal"
+              label="Code postal"
+              :rules="[(v) => !!v || 'Le code postal est requis']"
             />
           </v-form>
         </v-card-text>
@@ -85,7 +113,9 @@
         <v-card-actions>
           <v-spacer />
           <v-btn @click="closeDialog">Annuler</v-btn>
-          <v-btn color="primary" @click="saveUser">Enregistrer</v-btn>
+          <v-btn color="primary" @click="saveUser" :loading="saving"
+            >Enregistrer</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -95,12 +125,14 @@
         <v-card-title>Confirmer la suppression</v-card-title>
         <v-card-text>
           Êtes-vous sûr de vouloir supprimer
-          <strong>{{ userToDelete?.firstname }} {{ userToDelete?.lastname }}</strong> ?
+          <strong>{{ userToDelete?.prenom }} {{ userToDelete?.nom }}</strong> ?
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn @click="showDeleteConfirm = false">Annuler</v-btn>
-          <v-btn color="error" @click="confirmDeleteUser">Supprimer</v-btn>
+          <v-btn color="error" @click="confirmDeleteUser" :loading="deleting"
+            >Supprimer</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -108,88 +140,128 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from "vue";
+import { clientService, type Client } from "@/services/clients";
 
-const users = ref([
-  {
-    id: 1,
-    firstname: 'Louis',
-    lastname: 'Cauvet',
-    company: 'OpenAI',
-    email: 'louis@mail.com',
-    phone: '0601020304'
-  },
-  {
-    id: 2,
-    firstname: 'Emma',
-    lastname: 'Dubois',
-    company: 'TechCorp',
-    email: 'emma@mail.com',
-    phone: '0612345678'
-  },
-])
+const users = ref<Client[]>([]);
+const loading = ref(false);
+const saving = ref(false);
+const deleting = ref(false);
 
 const headers = [
-  { title: 'Prénom', key: 'firstname' },
-  { title: 'Nom', key: 'lastname' },
-  { title: 'Société', key: 'company' },
-  { title: 'Adresse mail', key: 'email' },
-  { title: 'Téléphone', key: 'phone' },
-  { title: '', key: 'actions', sortable: false, width: '100px' }
-]
+  { title: "Prénom", key: "prenom" },
+  { title: "Nom", key: "nom" },
+  { title: "Email", key: "email" },
+  { title: "Téléphone", key: "phone" },
+  { title: "Adresse", key: "address" },
+  { title: "", key: "actions", sortable: false, width: "100px" },
+];
 
-const showAddUser = ref(false)
-const showDeleteConfirm = ref(false)
-const editedUser = ref<any>(null)
-const userToDelete = ref<any>(null)
-const formValid = ref(false)
-const userForm = ref()
+const showAddUser = ref(false);
+const showDeleteConfirm = ref(false);
+const editedUser = ref<Client | null>(null);
+const userToDelete = ref<Client | null>(null);
+const formValid = ref(false);
+const userForm = ref();
 
-const form = ref({ firstname: '', lastname: '', company: '', email: '', phone: '' })
+const form = ref({
+  nom: "",
+  prenom: "",
+  email: "",
+  telephone: "",
+  adresse: {
+    rue: "",
+    ville: "",
+    codePostal: "",
+  },
+});
 
-function editUser(user: any) {
-  editedUser.value = user
-  form.value = { ...user }
-  showAddUser.value = true
-}
+onMounted(async () => {
+  await loadClients();
+});
 
-function askDeleteUser(user: any) {
-  userToDelete.value = user
-  showDeleteConfirm.value = true
-}
-
-function confirmDeleteUser() {
-  if (userToDelete.value) {
-    users.value = users.value.filter(u => u.id !== userToDelete.value.id)
+async function loadClients() {
+  loading.value = true;
+  try {
+    users.value = await clientService.getClients();
+  } catch (error) {
+    console.error("Erreur lors du chargement des clients:", error);
+  } finally {
+    loading.value = false;
   }
-  showDeleteConfirm.value = false
-  userToDelete.value = null
 }
 
-function saveUser() {
-  userForm.value?.validate()
-  if (!formValid.value) return
+function editUser(user: Client) {
+  editedUser.value = user;
+  form.value = {
+    nom: user.nom,
+    prenom: user.prenom,
+    email: user.email,
+    telephone: user.telephone,
+    adresse: { ...user.adresse },
+  };
+  showAddUser.value = true;
+}
 
-  if (editedUser.value) {
-    Object.assign(editedUser.value, form.value)
-  } else {
-    users.value.push({
-      id: Date.now(),
-      ...form.value,
-    })
+function askDeleteUser(user: Client) {
+  userToDelete.value = user;
+  showDeleteConfirm.value = true;
+}
+
+async function confirmDeleteUser() {
+  if (!userToDelete.value?._id) return;
+
+  deleting.value = true;
+  try {
+    await clientService.deleteClient(userToDelete.value._id);
+    await loadClients();
+  } catch (error) {
+    console.error("Erreur lors de la suppression:", error);
+  } finally {
+    deleting.value = false;
+    showDeleteConfirm.value = false;
+    userToDelete.value = null;
   }
-  closeDialog()
+}
+
+async function saveUser() {
+  userForm.value?.validate();
+  if (!formValid.value) return;
+
+  saving.value = true;
+  try {
+    if (editedUser.value?._id) {
+      await clientService.updateClient(editedUser.value._id, form.value);
+    } else {
+      await clientService.createClient(form.value);
+    }
+    await loadClients();
+    closeDialog();
+  } catch (error) {
+    console.error("Erreur lors de la sauvegarde:", error);
+  } finally {
+    saving.value = false;
+  }
 }
 
 function closeDialog() {
-  showAddUser.value = false
-  editedUser.value = null
-  form.value = { firstname: '', lastname: '', company: '', email: '', phone: '' }
-  userForm.value?.resetValidation()
+  showAddUser.value = false;
+  editedUser.value = null;
+  form.value = {
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    adresse: { rue: "", ville: "", codePostal: "" },
+  };
+  userForm.value?.resetValidation();
 }
 
 function formatPhone(phone: string) {
-  return phone.replace(/\D/g, '').replace(/(\d{2})(?=\d)/g, '$1 ').trim()
+  return phone
+    .replace(/\D/g, "")
+    .replace(/(\d{2})(?=\d)/g, "$1 ")
+    .trim();
 }
 </script>
 

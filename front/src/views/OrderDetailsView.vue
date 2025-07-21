@@ -34,11 +34,11 @@
       </template>
 
       <template #item.name="{ item }">
-        {{ getProduct(item.id)?.name || 'Produit inconnu' }}
+        {{ getProduct(item.id)?.name || "Produit inconnu" }}
       </template>
 
       <template #item.brand="{ item }">
-        {{ getProduct(item.id)?.brand || '-' }}
+        {{ getProduct(item.id)?.brand || "-" }}
       </template>
 
       <template #item.price="{ item }">
@@ -46,8 +46,13 @@
       </template>
 
       <template #item.color="{ item }">
-        <v-chip small :style="`background:${colorHex(getProduct(item.id)?.color || '')}; color:white`">
-          {{ colorLabel(getProduct(item.id)?.color || '') }}
+        <v-chip
+          small
+          :style="`background:${colorHex(
+            getProduct(item.id)?.color || ''
+          )}; color:white`"
+        >
+          {{ colorLabel(getProduct(item.id)?.color || "") }}
         </v-chip>
       </template>
 
@@ -58,13 +63,18 @@
           min="1"
           :max="getProduct(item.id)?.stock || 1"
           :error-messages="getQtyError(item)"
-          style="max-width: 100px;"
+          style="max-width: 100px"
           density="compact"
         />
       </template>
 
       <template #item.actions="{ index }">
-        <v-btn icon density="compact" color="error" @click="removeProduct(index)">
+        <v-btn
+          icon
+          density="compact"
+          color="error"
+          @click="removeProduct(index)"
+        >
           <v-icon size="18">mdi-delete</v-icon>
         </v-btn>
       </template>
@@ -77,7 +87,11 @@
     <v-row class="mt-4 justify-end">
       <v-col cols="auto">
         <v-btn
-          v-if="hasChanged && order.productsList.length > 0 && !order.productsList.some(p => getQtyError(p))"
+          v-if="
+            hasChanged &&
+            order.productsList.length > 0 &&
+            !order.productsList.some((p) => getQtyError(p))
+          "
           color="primary"
           @click="saveChanges"
         >
@@ -132,7 +146,8 @@
       <v-card>
         <v-card-title>Confirmer la suppression</v-card-title>
         <v-card-text>
-          Voulez-vous vraiment supprimer la commande <strong>{{ order.number }}</strong> ?
+          Voulez-vous vraiment supprimer la commande
+          <strong>{{ order.number }}</strong> ?
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -145,127 +160,210 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, onMounted, computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { clientService } from "@/services/clients";
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-const statuses = ['Demandée', 'En préparation', 'Expédiée', 'Récupérée', 'Annulée']
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  brand: string;
+  color: string;
+  stock: number;
+  image: string;
+}
 
-const clients = [
-  { id: 1, firstname: 'Louis', lastname: 'Cauvet', company: 'OpenAI', label: 'Louis Cauvet - OpenAI' },
-  { id: 2, firstname: 'Emma', lastname: 'Dubois', company: 'TechCorp', label: 'Emma Dubois - TechCorp' }
-]
+interface OrderItem {
+  id: number;
+  qty: number;
+}
 
-const products = [
-  { id: 1, name: 'Ordinateur Portable', price: 500, brand: 'HP', color: 'grey', stock: 10, image: 'https://picsum.photos/200' },
-  { id: 2, name: 'Clé USB 64Go', price: 30, brand: 'SanDisk', color: 'red', stock: 50, image: 'https://picsum.photos/201' },
-  { id: 3, name: 'Moniteur 27"', price: 200, brand: 'Dell', color: 'black', stock: 5, image: 'https://picsum.photos/205' }
-]
+interface Order {
+  id: string | null;
+  number: string;
+  date: string;
+  status: string;
+  clientId: string | null;
+  productsList: OrderItem[];
+}
 
-const order = ref<any>({
+const statuses = [
+  "Demandée",
+  "En préparation",
+  "Expédiée",
+  "Récupérée",
+  "Annulée",
+];
+
+const clients = ref<{ id: string; label: string }[]>([]);
+
+const products: Product[] = [
+  {
+    id: 1,
+    name: "Ordinateur Portable",
+    price: 500,
+    brand: "HP",
+    color: "grey",
+    stock: 10,
+    image: "https://picsum.photos/200",
+  },
+  {
+    id: 2,
+    name: "Clé USB 64Go",
+    price: 30,
+    brand: "SanDisk",
+    color: "red",
+    stock: 50,
+    image: "https://picsum.photos/201",
+  },
+  {
+    id: 3,
+    name: 'Moniteur 27"',
+    price: 200,
+    brand: "Dell",
+    color: "black",
+    stock: 5,
+    image: "https://picsum.photos/205",
+  },
+];
+
+const order = ref<Order>({
   id: null,
-  number: '',
-  date: '',
-  status: '',
+  number: "",
+  date: "",
+  status: "",
   clientId: null,
-  productsList: []
-})
+  productsList: [],
+});
 
-const initialOrder = ref<any>(null)
-const showDeleteConfirm = ref(false)
-const showAddProductDialog = ref(false)
-const formValid = ref(false)
-const editForm = ref()
+const initialOrder = ref<Order | null>(null);
+const showDeleteConfirm = ref(false);
+const showAddProductDialog = ref(false);
+const formValid = ref(false);
+const editForm = ref();
 
-const newProduct = ref<{ id: number | null, qty: number }>({ id: null, qty: 1 })
+const newProduct = ref<{ id: number | null; qty: number }>({
+  id: null,
+  qty: 1,
+});
 
 const productHeaders = [
-  { title: 'Image', key: 'image' },
-  { title: 'Nom', key: 'name' },
-  { title: 'Marque', key: 'brand' },
-  { title: 'Prix', key: 'price' },
-  { title: 'Couleur', key: 'color' },
-  { title: 'Quantité', key: 'qty' },
-  { title: '', key: 'actions', sortable: false, width: '60px' }
-]
+  { title: "Image", key: "image" },
+  { title: "Nom", key: "name" },
+  { title: "Marque", key: "brand" },
+  { title: "Prix", key: "price" },
+  { title: "Couleur", key: "color" },
+  { title: "Quantité", key: "qty" },
+  { title: "", key: "actions", sortable: false, width: "60px" },
+];
 
-onMounted(() => {
-  const orderId = route.params.id
+onMounted(async () => {
+  // Load clients from API
+  try {
+    const clientsData = await clientService.getClients();
+    clients.value = clientsData.map((client) => ({
+      id: client._id!,
+      label: `${client.prenom} ${client.nom} - ${client.email}`,
+    }));
+  } catch (error) {
+    console.error("Erreur lors du chargement des clients:", error);
+  }
+
+  const orderId = Array.isArray(route.params.id)
+    ? route.params.id[0]
+    : route.params.id;
   order.value = {
     id: orderId,
-    number: 'CMD001',
-    date: '2025-07-15',
-    status: 'Expédiée',
-    clientId: 2,
-    productsList: [{ id: 1, qty: 2 }]
-  }
-  initialOrder.value = JSON.parse(JSON.stringify(order.value))
-})
+    number: "CMD001",
+    date: "2025-07-15",
+    status: "Expédiée",
+    clientId: clients.value[0]?.id || null,
+    productsList: [{ id: 1, qty: 2 }],
+  };
+  initialOrder.value = JSON.parse(JSON.stringify(order.value));
+});
 
 const hasChanged = computed(() => {
-  return JSON.stringify(order.value) !== JSON.stringify(initialOrder.value)
-})
-
-const hasQtyErrors = computed(() => {
-  return !order.value.productsList.every(p => !getQtyError(p))
-})
+  return JSON.stringify(order.value) !== JSON.stringify(initialOrder.value);
+});
 
 function saveChanges() {
-  editForm.value?.validate()
-  if (!formValid.value) return
+  editForm.value?.validate();
+  if (!formValid.value) return;
 
-  if (!order.value.productsList.length || !order.value.productsList.every(p => !getQtyError(p))) return
+  if (
+    !order.value.productsList.length ||
+    !order.value.productsList.every((p) => !getQtyError(p))
+  )
+    return;
 
-  initialOrder.value = JSON.parse(JSON.stringify(order.value))
+  initialOrder.value = JSON.parse(JSON.stringify(order.value));
 }
 
 function confirmDelete() {
-  showDeleteConfirm.value = false
-  router.push('/commandes')
+  showDeleteConfirm.value = false;
+  router.push("/commandes");
 }
 
-function getProduct(id: number | null) {
-  return products.find(p => p.id === id)
+function getProduct(id: number | null): Product | undefined {
+  return products.find((p) => p.id === id);
 }
 
-function getQtyError(item: { id: number | null, qty: number }) {
-  if (!item.id) return 'Produit requis'
-  if (!item.qty || item.qty <= 0) return 'Quantité invalide'
-  const stock = getProduct(item.id)?.stock || 0
-  if (item.qty > stock) return `Stock insuffisant (max ${stock})`
-  return ''
+function getQtyError(item: { id: number | null; qty: number }): string {
+  if (!item.id) return "Produit requis";
+  if (!item.qty || item.qty <= 0) return "Quantité invalide";
+  const stock = getProduct(item.id)?.stock || 0;
+  if (item.qty > stock) return `Stock insuffisant (max ${stock})`;
+  return "";
 }
 
 function addProduct() {
-  if (!newProduct.value.id || getQtyError(newProduct.value)) return
-  order.value.productsList.push({ id: newProduct.value.id, qty: newProduct.value.qty })
-  newProduct.value = { id: null, qty: 1 }
-  showAddProductDialog.value = false
+  if (!newProduct.value.id || getQtyError(newProduct.value)) return;
+  order.value.productsList.push({
+    id: newProduct.value.id,
+    qty: newProduct.value.qty,
+  });
+  newProduct.value = { id: null, qty: 1 };
+  showAddProductDialog.value = false;
 }
 
 function removeProduct(index: number) {
-  order.value.productsList.splice(index, 1)
+  order.value.productsList.splice(index, 1);
 }
 
 function colorLabel(value: string) {
   const map: Record<string, string> = {
-    red: 'Rouge', blue: 'Bleu', green: 'Vert', yellow: 'Jaune', purple: 'Violet',
-    orange: 'Orange', grey: 'Gris', black: 'Noir', white: 'Blanc'
-  }
-  return map[value] || value
+    red: "Rouge",
+    blue: "Bleu",
+    green: "Vert",
+    yellow: "Jaune",
+    purple: "Violet",
+    orange: "Orange",
+    grey: "Gris",
+    black: "Noir",
+    white: "Blanc",
+  };
+  return map[value] || value;
 }
 
 function colorHex(value: string) {
   const map: Record<string, string> = {
-    red: '#e53935', blue: '#1e88e5', green: '#43a047', yellow: '#fdd835',
-    purple: '#8e24aa', orange: '#fb8c00', grey: '#757575',
-    black: '#000000', white: '#e0e0e0'
-  }
-  return map[value] || '#bdbdbd'
+    red: "#e53935",
+    blue: "#1e88e5",
+    green: "#43a047",
+    yellow: "#fdd835",
+    purple: "#8e24aa",
+    orange: "#fb8c00",
+    grey: "#757575",
+    black: "#000000",
+    white: "#e0e0e0",
+  };
+  return map[value] || "#bdbdbd";
 }
-
 </script>
 
 <style scoped>
