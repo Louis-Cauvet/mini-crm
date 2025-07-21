@@ -16,8 +16,6 @@ Backend API pour le système Mini CRM développé avec Node.js, Express, TypeScr
 
 ```bash
 # Installer les dépendances
-npm install
-# ou
 pnpm install
 
 # Copier le fichier d'environnement
@@ -40,92 +38,86 @@ NODE_ENV=development
 
 ```bash
 # Mode développement
-npm run dev
+pnpm run dev
 
 # Build de production
-npm run build
+pnpm run build
 
 # Démarrage production
-npm start
+pnpm start
 
 # Nettoyage
-npm run clean
+pnpm run clean
 ```
 
 ## 🗄️ Données de test
 
-### Peupler la base de données
+### Script de Seeding Automatique
 
-Pour faciliter le développement et les tests, un script de seed est disponible pour remplir la base de données avec des données de test :
+Le projet inclut un script complet pour générer des données de test réalistes :
 
 ```bash
-# En mode développement
-npm run seed
+# Peupler la base avec des données de test
+pnpm run seed
 
 # En production (après build)
-npm run build
-npm run seed:prod
+pnpm run build
+pnpm run seed:prod
 ```
 
-### Données générées
+### Données Générées Automatiquement
 
-Le script crée :
+Le script `src/scripts/seed.ts` crée :
 
-- **3 utilisateurs** avec différents rôles
-- **5 clients** avec des informations complètes
-- **10 articles** variés (informatique, téléphones, accessoires)
-- **5 commandes** avec différents statuts
+- **3 utilisateurs** avec rôles admin/user
+- **5 clients** d'entreprises françaises
+- **10 articles** tech (Apple, Samsung, Dell, etc.)
+- **5 commandes** complètes avec différents statuts
 
-### Comptes de test
+### Comptes de Test Prêts
 
-Après le seeding, vous pouvez vous connecter avec :
+| Email                     | Mot de passe | Rôle  | Description          |
+| ------------------------- | ------------ | ----- | -------------------- |
+| `admin@minicrm.com`       | `admin123`   | Admin | Tous droits          |
+| `user@minicrm.com`        | `user123`    | User  | Utilisateur standard |
+| `paul.ageron@minicrm.com` | `paul123`    | User  | Compte développeur   |
 
-| Rôle  | Email                     | Mot de passe | Description           |
-| ----- | ------------------------- | ------------ | --------------------- |
-| Admin | `admin@minicrm.com`       | `admin123`   | Compte administrateur |
-| User  | `user@minicrm.com`        | `user123`    | Utilisateur standard  |
-| User  | `paul.ageron@minicrm.com` | `paul123`    | Utilisateur de test   |
+### Exemples de Données
 
-### Données d'exemple
+**Articles populés :**
 
-**Clients :**
+- MacBook Pro 16" (2499€, stock: 15)
+- iPhone 15 Pro (1199€, stock: 25)
+- Samsung Galaxy S24 (899€, stock: 20)
+- Dell XPS 13 (1299€, stock: 12)
+- iPad Air, AirPods Pro, Moniteur 4K...
 
-- Louis Cauvet (OpenAI) - Paris
-- Emma Dubois (TechCorp) - Lyon
-- Paul Martin (StartupX) - Toulouse
-- Sophie Leroy (InnovTech) - Bordeaux
-- Thomas Moreau (DigitalCorp) - Marseille
+**Commandes réalistes :**
 
-**Articles :**
-
-- MacBook Pro 16", iPhone 15 Pro, Samsung Galaxy S24
-- Dell XPS 13, iPad Air, AirPods Pro
-- Moniteur 4K, Clavier mécanique, Souris gaming
-- Disque SSD 1To
-
-**Commandes :**
-
-- Commandes avec différents statuts (Demandée, En préparation, Expédiée, Récupérée)
-- Montants variés de 1 246€ à 2 778€
-- Dates échelonnées sur novembre-décembre 2024
+- Statuts variés (Demandée → Expédiée → Récupérée)
+- Montants de 1246€ à 2778€
+- Dates novembre-décembre 2024
+- Relations client-articles complètes
 
 ## 📁 Structure du projet
 
 ```text
 src/
 ├── middleware/      # Middlewares personnalisés
-│   └── auth.ts      # Middleware d'authentification
+│   └── auth.ts      # Middleware d'authentification JWT + rôles
 ├── models/          # Modèles Mongoose
-│   ├── User.ts      # Modèle Utilisateur
-│   ├── Article.ts   # Modèle Article
-│   ├── Client.ts    # Modèle Client
-│   └── Order.ts     # Modèle Commande
+│   ├── User.ts      # Modèle Utilisateur avec auth bcrypt
+│   ├── Article.ts   # Modèle Article avec stock
+│   ├── Client.ts    # Modèle Client avec adresse
+│   └── Order.ts     # Modèle Commande avec relations
 ├── routes/          # Routes Express
-│   ├── auth.ts      # Routes d'authentification
+│   ├── auth.ts      # Routes d'authentification (public)
 │   ├── articles.ts  # Routes articles (protégées)
 │   ├── clients.ts   # Routes clients (protégées)
 │   └── orders.ts    # Routes commandes (protégées)
-└── server.ts        # Point d'entrée
+├── scripts/         # Scripts utilitaires
+│   └── seed.ts      # Script de peuplement de la BDD
+└── server.ts        # Point d'entrée avec CORS et cookies
 ```
 
 ## 🛣️ API Endpoints
@@ -288,17 +280,17 @@ curl http://localhost:3000/api/clients -b cookies.txt
 
 ```bash
 # 1. Installer les dépendances
-npm install
+pnpm install
 
 # 2. Configurer l'environnement
 cp .env.example .env
 # Éditer le fichier .env avec vos paramètres
 
 # 3. Peupler la base de données
-npm run seed
+pnpm run seed
 
 # 4. Démarrer le serveur
-npm run dev
+pnpm run dev
 ```
 
 L'API sera disponible sur `http://localhost:3000` avec des données de test prêtes à utiliser !

@@ -115,8 +115,6 @@ src/
 # Installation des dépendances
 pnpm install
 
-# Ou avec npm
-npm install
 ```
 
 ### Scripts de développement

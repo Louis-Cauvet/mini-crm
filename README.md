@@ -168,13 +168,13 @@ mini-crm/
 cd api
 
 # Lancement en mode développement
-npm run dev
+pnpm run dev
 
 # Build de production
-npm run build
+pnpm run build
 
 # Lancement de production
-npm start
+pnpm start
 ```
 
 **Frontend :**
