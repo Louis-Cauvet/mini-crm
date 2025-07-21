@@ -103,17 +103,17 @@ mini-crm/
 
 1. **Cloner le repository :**
 
-```bash
-git clone https://github.com/Louis-Cauvet/mini-crm.git
-cd mini-crm
-```
+    ```bash
+    git clone https://github.com/Louis-Cauvet/mini-crm.git
+    cd mini-crm
+    ```
 
 2. **Installer les dépendances :**
 
-```bash
-cd front
-pnpm install
-```
+    ```bash
+    cd front
+    pnpm install
+    ```
 
 ### Scripts disponibles
 
