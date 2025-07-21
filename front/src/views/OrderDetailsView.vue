@@ -1,99 +1,118 @@
 <template>
   <v-container fluid>
-    <h2>Détails de la commande</h2>
+    <v-row justify="space-between" align="center" class="mb-4">
+      <v-col cols="auto">
+        <h2>Détails de la commande</h2>
+      </v-col>
+      <v-col cols="auto">
+        <v-btn @click="$router.push('/commandes')" variant="outlined">
+          <v-icon start>mdi-arrow-left</v-icon> Retour
+        </v-btn>
+      </v-col>
+    </v-row>
 
-    <v-card class="pa-4 mb-4">
+    <v-card v-if="order" class="pa-4 mb-4">
       <v-form ref="editForm" v-model="formValid">
-        <v-text-field v-model="order.date" label="Date" type="date" />
-        <v-select v-model="order.status" :items="statuses" label="Statut" />
-        <v-select
-          v-model="order.clientId"
-          :items="clients"
-          item-title="label"
-          item-value="id"
-          label="Client"
-        />
+        <v-row>
+          <v-col cols="12" md="6">
+            <v-text-field
+              :model-value="formatDate(order.dateCommande)"
+              label="Date de commande"
+              readonly
+            />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-select
+              v-model="order.statut"
+              :items="statuses"
+              label="Statut"
+              @update:modelValue="hasChanged = true"
+            />
+          </v-col>
+          <v-col cols="12">
+            <v-text-field
+              :model-value="`${order.client.prenom} ${order.client.nom} - ${order.client.email}`"
+              label="Client"
+              readonly
+            />
+          </v-col>
+        </v-row>
       </v-form>
     </v-card>
 
-    <h3>Produits de la commande</h3>
-
-    <v-data-table
-      :items="order.productsList"
-      :headers="productHeaders"
-      item-value="id"
-      no-data-text="Aucun produit ajouté"
-      class="mb-2"
-      density="comfortable"
-      hide-default-footer
-    >
-      <template #item.image="{ item }">
-        <v-avatar size="40">
-          <v-img :src="getProduct(item.id)?.image || ''" />
-        </v-avatar>
-      </template>
-
-      <template #item.name="{ item }">
-        {{ getProduct(item.id)?.name || "Produit inconnu" }}
-      </template>
-
-      <template #item.brand="{ item }">
-        {{ getProduct(item.id)?.brand || "-" }}
-      </template>
-
-      <template #item.price="{ item }">
-        {{ getProduct(item.id)?.price }} €
-      </template>
-
-      <template #item.color="{ item }">
-        <v-chip
-          small
-          :style="`background:${colorHex(
-            getProduct(item.id)?.color || ''
-          )}; color:white`"
+    <v-card v-if="order">
+      <v-card-title>Produits de la commande</v-card-title>
+      <v-card-text>
+        <v-data-table
+          :items="order.articles"
+          :headers="productHeaders"
+          no-data-text="Aucun produit ajouté"
+          density="comfortable"
+          hide-default-footer
         >
-          {{ colorLabel(getProduct(item.id)?.color || "") }}
-        </v-chip>
-      </template>
+          <template #item.image="{ item }">
+            <v-avatar size="40">
+              <v-img :src="item.article.image || 'https://picsum.photos/200'" />
+            </v-avatar>
+          </template>
 
-      <template #item.qty="{ item }">
-        <v-text-field
-          v-model.number="item.qty"
-          type="number"
-          min="1"
-          :max="getProduct(item.id)?.stock || 1"
-          :error-messages="getQtyError(item)"
-          style="max-width: 100px"
-          density="compact"
-        />
-      </template>
+          <template #item.nom="{ item }">
+            {{ item.article.nom }}
+          </template>
 
-      <template #item.actions="{ index }">
-        <v-btn
-          icon
-          density="compact"
-          color="error"
-          @click="removeProduct(index)"
-        >
-          <v-icon size="18">mdi-delete</v-icon>
-        </v-btn>
-      </template>
-    </v-data-table>
+          <template #item.marque="{ item }">
+            {{ item.article.marque }}
+          </template>
 
-    <v-btn color="primary" variant="tonal" @click="showAddProductDialog = true">
-      <v-icon start>mdi-plus</v-icon> Ajouter un produit
-    </v-btn>
+          <template #item.prixUnitaire="{ item }">
+            {{ item.prixUnitaire }} €
+          </template>
+
+          <template #item.couleur="{ item }">
+            <v-chip
+              small
+              :style="`background:${colorHex(item.article.couleur)}; color:white`"
+            >
+              {{ colorLabel(item.article.couleur) }}
+            </v-chip>
+          </template>
+
+          <template #item.quantite="{ item }">
+            <v-text-field
+              v-model.number="item.quantite"
+              type="number"
+              min="1"
+              :max="item.article.stock"
+              style="max-width: 100px"
+              density="compact"
+              @input="hasChanged = true"
+            />
+          </template>
+
+          <template #item.total="{ item }">
+            {{ (item.quantite * item.prixUnitaire).toFixed(2) }} €
+          </template>
+        </v-data-table>
+
+        <v-divider class="my-4" />
+
+        <v-row justify="end">
+          <v-col cols="auto">
+            <div class="text-h6">
+              Total: {{ order.montantTotal.toFixed(2) }} €
+            </div>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
 
     <v-row class="mt-4 justify-end">
       <v-col cols="auto">
         <v-btn
-          v-if="
-            hasChanged &&
-            order.productsList.length > 0 &&
-            !order.productsList.some((p) => getQtyError(p))
-          "
+          v-if="hasChanged && order"
           color="primary"
           @click="saveChanges"
+          :loading="saveLoading"
         >
           <v-icon start>mdi-content-save</v-icon> Enregistrer
         </v-btn>
@@ -105,91 +124,52 @@
       </v-col>
     </v-row>
 
-    <!-- Modale ajout produit -->
-    <v-dialog v-model="showAddProductDialog" max-width="500">
-      <v-card>
-        <v-card-title>Ajouter un produit</v-card-title>
-        <v-card-text>
-          <v-select
-            v-model="newProduct.id"
-            :items="products"
-            item-title="name"
-            item-value="id"
-            label="Produit"
-          />
-          <v-text-field
-            v-model.number="newProduct.qty"
-            type="number"
-            min="1"
-            :max="getProduct(newProduct.id)?.stock || 1"
-            label="Quantité"
-          />
-          <v-alert
-            v-if="getQtyError(newProduct)"
-            type="error"
-            density="compact"
-            class="mt-2"
-          >
-            {{ getQtyError(newProduct) }}
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="showAddProductDialog = false">Annuler</v-btn>
-          <v-btn color="primary" @click="addProduct">Ajouter</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Confirmation suppression -->
+    <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="showDeleteConfirm" max-width="500">
       <v-card>
         <v-card-title>Confirmer la suppression</v-card-title>
         <v-card-text>
-          Voulez-vous vraiment supprimer la commande
-          <strong>{{ order.number }}</strong> ?
+          Voulez-vous vraiment supprimer cette commande ?
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="showDeleteConfirm = false">Annuler</v-btn>
-          <v-btn color="error" @click="confirmDelete">Supprimer</v-btn>
+          <v-btn @click="showDeleteConfirm = false" :disabled="deleteLoading"
+            >Annuler</v-btn
+          >
+          <v-btn color="error" @click="confirmDelete" :loading="deleteLoading"
+            >Supprimer</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Loading -->
+    <v-overlay v-model="loading" class="align-center justify-center">
+      <v-progress-circular indeterminate size="64" />
+    </v-overlay>
+
+    <!-- Error Snackbar -->
+    <v-snackbar v-model="showError" color="error" timeout="5000">
+      {{ errorMessage }}
+      <template #actions>
+        <v-btn @click="showError = false">Fermer</v-btn>
+      </template>
+    </v-snackbar>
+
+    <!-- Success Snackbar -->
+    <v-snackbar v-model="showSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+    </v-snackbar>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { clientService } from "@/services/clients";
+import { orderService, type Order } from "@/services/orders";
 
 const route = useRoute();
 const router = useRouter();
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  brand: string;
-  color: string;
-  stock: number;
-  image: string;
-}
-
-interface OrderItem {
-  id: number;
-  qty: number;
-}
-
-interface Order {
-  id: string | null;
-  number: string;
-  date: string;
-  status: string;
-  clientId: string | null;
-  productsList: OrderItem[];
-}
 
 const statuses = [
   "Demandée",
@@ -199,140 +179,100 @@ const statuses = [
   "Annulée",
 ];
 
-const clients = ref<{ id: string; label: string }[]>([]);
-
-const products: Product[] = [
-  {
-    id: 1,
-    name: "Ordinateur Portable",
-    price: 500,
-    brand: "HP",
-    color: "grey",
-    stock: 10,
-    image: "https://picsum.photos/200",
-  },
-  {
-    id: 2,
-    name: "Clé USB 64Go",
-    price: 30,
-    brand: "SanDisk",
-    color: "red",
-    stock: 50,
-    image: "https://picsum.photos/201",
-  },
-  {
-    id: 3,
-    name: 'Moniteur 27"',
-    price: 200,
-    brand: "Dell",
-    color: "black",
-    stock: 5,
-    image: "https://picsum.photos/205",
-  },
-];
-
-const order = ref<Order>({
-  id: null,
-  number: "",
-  date: "",
-  status: "",
-  clientId: null,
-  productsList: [],
-});
-
-const initialOrder = ref<Order | null>(null);
+const order = ref<Order | null>(null);
+const hasChanged = ref(false);
+const loading = ref(false);
+const saveLoading = ref(false);
+const deleteLoading = ref(false);
 const showDeleteConfirm = ref(false);
-const showAddProductDialog = ref(false);
+const showError = ref(false);
+const showSuccess = ref(false);
+const errorMessage = ref("");
+const successMessage = ref("");
 const formValid = ref(false);
 const editForm = ref();
 
-const newProduct = ref<{ id: number | null; qty: number }>({
-  id: null,
-  qty: 1,
-});
-
 const productHeaders = [
   { title: "Image", key: "image" },
-  { title: "Nom", key: "name" },
-  { title: "Marque", key: "brand" },
-  { title: "Prix", key: "price" },
-  { title: "Couleur", key: "color" },
-  { title: "Quantité", key: "qty" },
-  { title: "", key: "actions", sortable: false, width: "60px" },
+  { title: "Nom", key: "nom" },
+  { title: "Marque", key: "marque" },
+  { title: "Prix unitaire", key: "prixUnitaire" },
+  { title: "Couleur", key: "couleur" },
+  { title: "Quantité", key: "quantite" },
+  { title: "Total", key: "total" },
 ];
 
 onMounted(async () => {
-  // Load clients from API
-  try {
-    const clientsData = await clientService.getClients();
-    clients.value = clientsData.map((client) => ({
-      id: client._id!,
-      label: `${client.prenom} ${client.nom} - ${client.email}`,
-    }));
-  } catch (error) {
-    console.error("Erreur lors du chargement des clients:", error);
-  }
+  await loadOrder();
+});
 
+async function loadOrder() {
   const orderId = Array.isArray(route.params.id)
     ? route.params.id[0]
     : route.params.id;
-  order.value = {
-    id: orderId,
-    number: "CMD001",
-    date: "2025-07-15",
-    status: "Expédiée",
-    clientId: clients.value[0]?.id || null,
-    productsList: [{ id: 1, qty: 2 }],
-  };
-  initialOrder.value = JSON.parse(JSON.stringify(order.value));
-});
 
-const hasChanged = computed(() => {
-  return JSON.stringify(order.value) !== JSON.stringify(initialOrder.value);
-});
-
-function saveChanges() {
-  editForm.value?.validate();
-  if (!formValid.value) return;
-
-  if (
-    !order.value.productsList.length ||
-    !order.value.productsList.every((p) => !getQtyError(p))
-  )
-    return;
-
-  initialOrder.value = JSON.parse(JSON.stringify(order.value));
+  try {
+    loading.value = true;
+    order.value = await orderService.getOrder(orderId);
+  } catch (error) {
+    showErrorMessage("Erreur lors du chargement de la commande");
+  } finally {
+    loading.value = false;
+  }
 }
 
-function confirmDelete() {
-  showDeleteConfirm.value = false;
-  router.push("/commandes");
+async function saveChanges() {
+  if (!order.value) return;
+
+  try {
+    saveLoading.value = true;
+
+    // Recalculate total
+    const newTotal = order.value.articles.reduce(
+      (sum, item) => sum + item.quantite * item.prixUnitaire,
+      0
+    );
+
+    // Only send the updateable fields, not the full order object
+    const updateData = {
+      statut: order.value.statut,
+      articles: order.value.articles.map(item => ({
+        article: item.article._id,
+        quantite: item.quantite,
+        prixUnitaire: item.prixUnitaire
+      })),
+      montantTotal: newTotal,
+    };
+
+    const updatedOrder = await orderService.updateOrder(order.value._id, updateData);
+    order.value = updatedOrder;
+    hasChanged.value = false;
+    showSuccessMessage("Commande modifiée avec succès");
+  } catch (error) {
+    showErrorMessage("Erreur lors de la modification de la commande");
+  } finally {
+    saveLoading.value = false;
+  }
 }
 
-function getProduct(id: number | null): Product | undefined {
-  return products.find((p) => p.id === id);
+async function confirmDelete() {
+  if (!order.value) return;
+
+  try {
+    deleteLoading.value = true;
+    await orderService.deleteOrder(order.value._id);
+    showSuccessMessage("Commande supprimée avec succès");
+    router.push("/commandes");
+  } catch (error) {
+    showErrorMessage("Erreur lors de la suppression de la commande");
+  } finally {
+    deleteLoading.value = false;
+    showDeleteConfirm.value = false;
+  }
 }
 
-function getQtyError(item: { id: number | null; qty: number }): string {
-  if (!item.id) return "Produit requis";
-  if (!item.qty || item.qty <= 0) return "Quantité invalide";
-  const stock = getProduct(item.id)?.stock || 0;
-  if (item.qty > stock) return `Stock insuffisant (max ${stock})`;
-  return "";
-}
-
-function addProduct() {
-  if (!newProduct.value.id || getQtyError(newProduct.value)) return;
-  order.value.productsList.push({
-    id: newProduct.value.id,
-    qty: newProduct.value.qty,
-  });
-  newProduct.value = { id: null, qty: 1 };
-  showAddProductDialog.value = false;
-}
-
-function removeProduct(index: number) {
-  order.value.productsList.splice(index, 1);
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString("fr-FR");
 }
 
 function colorLabel(value: string) {
@@ -364,7 +304,23 @@ function colorHex(value: string) {
   };
   return map[value] || "#bdbdbd";
 }
+
+function showErrorMessage(message: string) {
+  errorMessage.value = message;
+  showError.value = true;
+}
+
+function showSuccessMessage(message: string) {
+  successMessage.value = message;
+  showSuccess.value = true;
+}
 </script>
+
+<style scoped>
+.action-buttons > *:not(:first-child) {
+  margin-left: 10px;
+}
+</style>
 
 <style scoped>
 .action-buttons > *:not(:first-child) {

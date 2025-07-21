@@ -5,7 +5,7 @@
         <h2>Liste des commandes</h2>
       </v-col>
       <v-col cols="auto">
-        <v-btn color="primary" @click="showAddOrder = true">
+        <v-btn color="primary" @click="showAddOrder = true" :loading="loading">
           <v-icon start>mdi-plus</v-icon> Ajouter une commande
         </v-btn>
       </v-col>
@@ -14,53 +14,76 @@
     <v-data-table
       :items="sortedOrders"
       :headers="headers"
-      item-value="id"
+      :loading="loading"
+      item-value="_id"
       class="elevation-1"
       density="comfortable"
       no-data-text="Aucune commande trouvée"
     >
-      <template #item.clientId="{ item }">
-        {{ getClientLabel(item.clientId) }}
+      <template #item.client="{ item }">
+        {{ `${item.client.prenom} ${item.client.nom}` }}
       </template>
 
-      <template #item.total="{ item }">
-        {{ item.total }} €
+      <template #item.montantTotal="{ item }">
+        {{ item.montantTotal }} €
+      </template>
+
+      <template #item.dateCommande="{ item }">
+        {{ formatDate(item.dateCommande) }}
       </template>
 
       <template #item.actions="{ item }">
         <div class="action-buttons d-flex justify-end align-center gap-2">
-          <v-btn icon density="compact" color="primary" @click="editOrder(item)">
+          <v-btn
+            icon
+            density="compact"
+            color="primary"
+            @click="editOrder(item)"
+          >
             <v-icon size="18">mdi-pencil</v-icon>
           </v-btn>
-          <v-btn icon density="compact" color="error" @click="askDeleteOrder(item)">
+          <v-btn
+            icon
+            density="compact"
+            color="error"
+            @click="askDeleteOrder(item)"
+          >
             <v-icon size="18">mdi-delete</v-icon>
           </v-btn>
-          <v-btn icon density="compact" color="info" :to="`/commandes/${item.id}`">
+          <v-btn
+            icon
+            density="compact"
+            color="info"
+            :to="`/commandes/${item._id}`"
+          >
             <v-icon size="18">mdi-eye</v-icon>
           </v-btn>
         </div>
       </template>
     </v-data-table>
 
+    <!-- Add/Edit Order Dialog -->
     <v-dialog v-model="showAddOrder" max-width="700">
       <v-card>
-        <v-card-title>{{ editedOrder ? 'Modifier' : 'Ajouter' }} une commande</v-card-title>
+        <v-card-title
+          >{{ editedOrder ? "Modifier" : "Ajouter" }} une commande</v-card-title
+        >
         <v-card-text>
           <v-form ref="orderForm" v-model="formValid">
-            <v-text-field v-model="form.date" label="Date" type="date" :rules="[v => !!v || 'Date requise']" />
             <v-select
-              v-model="form.status"
+              v-model="form.statut"
               :items="statuses"
               label="Statut"
-              :rules="[v => !!v || 'Statut requis']"
+              :rules="[(v) => !!v || 'Statut requis']"
             />
             <v-select
-              v-model="form.clientId"
+              v-model="form.client"
               :items="clients"
               item-title="label"
-              item-value="id"
+              item-value="_id"
               label="Client"
-              :rules="[v => !!v || 'Client requis']"
+              :rules="[(v) => !!v || 'Client requis']"
+              :loading="clientsLoading"
             />
 
             <v-sheet class="pa-4 mb-4" elevation="1" rounded>
@@ -76,25 +99,30 @@
                 Vous devez ajouter au moins un produit à la commande.
               </v-alert>
 
-              <div v-for="(product, index) in form.productsList" :key="index" class="product-line d-flex align-center mb-2">
+              <div
+                v-for="(product, index) in form.articles"
+                :key="index"
+                class="product-line d-flex align-center mb-2"
+              >
                 <v-select
-                  v-model="product.id"
-                  :items="products"
-                  item-title="name"
-                  item-value="id"
+                  v-model="product.article"
+                  :items="articles"
+                  item-title="nom"
+                  item-value="_id"
                   label="Produit"
                   class="flex-grow-1"
                   density="comfortable"
                   @update:modelValue="updateTotal"
-                  :rules="[v => !!v || 'Produit requis']"
+                  :rules="[(v) => !!v || 'Produit requis']"
+                  :loading="articlesLoading"
                 />
                 <v-text-field
-                  v-model.number="product.qty"
+                  v-model.number="product.quantite"
                   label="Quantité"
                   type="number"
                   min="1"
                   density="comfortable"
-                  style="max-width: 100px; margin-left: 8px;"
+                  style="max-width: 100px; margin-left: 8px"
                   @input="updateTotal"
                   :error-messages="getQuantityError(product)"
                 />
@@ -105,7 +133,10 @@
                   variant="tonal"
                   color="error"
                   class="delete-btn ml-2 mb-5"
-                  @click="removeProduct(index); updateTotal()"
+                  @click="
+                    removeProduct(index);
+                    updateTotal();
+                  "
                 >
                   <v-icon size="14">mdi-close</v-icon>
                 </v-btn>
@@ -115,191 +146,310 @@
                 <v-icon start>mdi-plus</v-icon> Ajouter un produit
               </v-btn>
             </v-sheet>
+
+            <v-text-field
+              v-model="calculatedTotal"
+              label="Total"
+              readonly
+              suffix="€"
+              variant="outlined"
+            />
           </v-form>
         </v-card-text>
 
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="closeDialog">Annuler</v-btn>
-          <v-btn color="primary" @click="saveOrder">Enregistrer</v-btn>
+          <v-btn @click="closeDialog" :disabled="saveLoading">Annuler</v-btn>
+          <v-btn color="primary" @click="saveOrder" :loading="saveLoading"
+            >Enregistrer</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
 
+    <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="showDeleteConfirm" max-width="500">
       <v-card>
         <v-card-title>Confirmer la suppression</v-card-title>
         <v-card-text>
-          Voulez-vous vraiment supprimer la commande <strong>{{ orderToDelete?.number }}</strong> ?
+          Voulez-vous vraiment supprimer cette commande ?
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="showDeleteConfirm = false">Annuler</v-btn>
-          <v-btn color="error" @click="confirmDeleteOrder">Supprimer</v-btn>
+          <v-btn @click="showDeleteConfirm = false" :disabled="deleteLoading"
+            >Annuler</v-btn
+          >
+          <v-btn
+            color="error"
+            @click="confirmDeleteOrder"
+            :loading="deleteLoading"
+            >Supprimer</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Error Snackbar -->
+    <v-snackbar v-model="showError" color="error" timeout="5000">
+      {{ errorMessage }}
+      <template #actions>
+        <v-btn @click="showError = false">Fermer</v-btn>
+      </template>
+    </v-snackbar>
+
+    <!-- Success Snackbar -->
+    <v-snackbar v-model="showSuccess" color="success" timeout="3000">
+      {{ successMessage }}
+    </v-snackbar>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from "vue";
+import { orderService, type Order } from "@/services/orders";
+import { articleService, type Article } from "@/services/articles";
+import { clientService, type Client } from "@/services/clients";
 
-const statuses = ['Demandée', 'En préparation', 'Expédiée', 'Récupérée', "'Annulée'"]
+const statuses = [
+  "Demandée",
+  "En préparation",
+  "Expédiée",
+  "Récupérée",
+  "Annulée",
+];
 
-const clients = [
-  { id: 1, firstname: 'Louis', lastname: 'Cauvet', company: 'OpenAI', label: 'Louis Cauvet - OpenAI' },
-  { id: 2, firstname: 'Emma', lastname: 'Dubois', company: 'TechCorp', label: 'Emma Dubois - TechCorp' }
-]
-
-const products = [
-  { id: 1, name: 'Ordinateur Portable', price: 500, stock: 10 },
-  { id: 2, name: 'Clé USB 64Go', price: 30, stock: 50 },
-  { id: 3, name: 'Moniteur 27"', price: 200, stock: 5 }
-]
-
-const orders = ref([
-  { id: 1, number: 'CMD001', date: '2025-07-10', status: 'Demandée', clientId: 1, productsList: [{ id: 1, qty: 2 }], total: 1000 },
-  { id: 2, number: 'CMD002', date: '2025-07-15', status: 'Expédiée', clientId: 2, productsList: [{ id: 2, qty: 1 }], total: 30 }
-])
+const orders = ref<Order[]>([]);
+const clients = ref<(Client & { label: string })[]>([]);
+const articles = ref<Article[]>([]);
 
 const headers = [
-  { title: 'Numéro', key: 'number' },
-  { title: 'Date', key: 'date' },
-  { title: 'Statut', key: 'status' },
-  { title: 'Client', key: 'clientId' },
-  { title: 'Total', key: 'total' },
-  { title: '', key: 'actions', sortable: false, width: '100px' }
-]
+  { title: "Client", key: "client" },
+  { title: "Date", key: "dateCommande" },
+  { title: "Statut", key: "statut" },
+  { title: "Total", key: "montantTotal" },
+  { title: "", key: "actions", sortable: false, width: "100px" },
+];
 
-const showAddOrder = ref(false)
-const showDeleteConfirm = ref(false)
-const editedOrder = ref<any>(null)
-const orderToDelete = ref<any>(null)
-const formValid = ref(false)
-const orderForm = ref()
-const showNoProductError = ref(false)
+// Loading states
+const loading = ref(false);
+const clientsLoading = ref(false);
+const articlesLoading = ref(false);
+const saveLoading = ref(false);
+const deleteLoading = ref(false);
+
+// Dialog states
+const showAddOrder = ref(false);
+const showDeleteConfirm = ref(false);
+const showError = ref(false);
+const showSuccess = ref(false);
+const errorMessage = ref("");
+const successMessage = ref("");
+
+const editedOrder = ref<Order | null>(null);
+const orderToDelete = ref<Order | null>(null);
+const formValid = ref(false);
+const orderForm = ref();
+const showNoProductError = ref(false);
 
 const form = ref({
-  date: '',
-  status: '',
-  clientId: null,
-  productsList: [] as { id: number | null, qty: number }[]
-})
+  statut: "Demandée",
+  client: "",
+  articles: [] as { article: string; quantite: number }[],
+});
 
-function getClientLabel(id: number) {
-  const client = clients.find(c => c.id === id)
-  return client ? `${client.firstname} ${client.lastname} - ${client.company}` : 'Client inconnu'
-}
+const calculatedTotal = computed(() => {
+  let total = 0;
+  form.value.articles.forEach((item) => {
+    const article = articles.value.find((a) => a._id === item.article);
+    if (article) {
+      total += article.prix * item.quantite;
+    }
+  });
+  return total.toFixed(2);
+});
 
-function generateNextOrderNumber() {
-  const numbers = orders.value.map(o => parseInt(o.number.replace('CMD', ''))).filter(n => !isNaN(n))
-  const max = numbers.length ? Math.max(...numbers) : 0
-  return 'CMD' + String(max + 1).padStart(3, '0')
-}
+onMounted(async () => {
+  await Promise.all([loadOrders(), loadClients(), loadArticles()]);
+});
 
-function getProductStock(productId: number | null) {
-  if (!productId) return 0
-  const p = products.find(p => p.id === productId)
-  return p ? p.stock : 0
-}
-
-function getQuantityError(product: { id: number | null; qty: number }) {
-  if (!product.qty || product.qty <= 0) {
-    return "Quantité invalide"
+async function loadOrders() {
+  try {
+    loading.value = true;
+    orders.value = await orderService.getOrders();
+  } catch (error) {
+    showErrorMessage("Erreur lors du chargement des commandes");
+  } finally {
+    loading.value = false;
   }
-  if (product.id) {
-    const stock = getProductStock(product.id)
-    if (product.qty > stock) {
-      return `Stock insuffisant (max ${stock})`
+}
+
+async function loadClients() {
+  try {
+    clientsLoading.value = true;
+    const clientsData = await clientService.getClients();
+    clients.value = clientsData.map((client) => ({
+      ...client,
+      label: `${client.prenom} ${client.nom} - ${client.email}`,
+    }));
+  } catch (error) {
+    showErrorMessage("Erreur lors du chargement des clients");
+  } finally {
+    clientsLoading.value = false;
+  }
+}
+
+async function loadArticles() {
+  try {
+    articlesLoading.value = true;
+    articles.value = await articleService.getArticles();
+  } catch (error) {
+    showErrorMessage("Erreur lors du chargement des articles");
+  } finally {
+    articlesLoading.value = false;
+  }
+}
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString("fr-FR");
+}
+
+function getArticleStock(articleId: string) {
+  const article = articles.value.find((a) => a._id === articleId);
+  return article ? article.stock : 0;
+}
+
+function getQuantityError(product: { article: string; quantite: number }) {
+  if (!product.quantite || product.quantite <= 0) {
+    return "Quantité invalide";
+  }
+  if (product.article) {
+    const stock = getArticleStock(product.article);
+    if (product.quantite > stock) {
+      return `Stock insuffisant (max ${stock})`;
     }
   }
-  return ''
+  return "";
 }
 
-
 function addProduct() {
-  form.value.productsList.push({ id: null, qty: 1 })
+  form.value.articles.push({ article: "", quantite: 1 });
 }
 
 function removeProduct(index: number) {
-  form.value.productsList.splice(index, 1)
+  form.value.articles.splice(index, 1);
 }
 
 function updateTotal() {
-  let total = 0
-  form.value.productsList.forEach(p => {
-    const prod = products.find(prod => prod.id === p.id)
-    if (prod) {
-      total += (prod.price * (p.qty || 0))
-    }
-  })
-  return total
+  // Total is computed automatically
 }
 
-function editOrder(order: any) {
-  editedOrder.value = order
+function editOrder(order: Order) {
+  editedOrder.value = order;
   form.value = {
-    date: order.date,
-    status: order.status,
-    clientId: order.clientId,
-    productsList: JSON.parse(JSON.stringify(order.productsList))
+    statut: order.statut,
+    client: order.client._id,
+    articles: order.articles.map((item) => ({
+      article: item.article._id,
+      quantite: item.quantite,
+    })),
+  };
+  showAddOrder.value = true;
+}
+
+function askDeleteOrder(order: Order) {
+  orderToDelete.value = order;
+  showDeleteConfirm.value = true;
+}
+
+async function confirmDeleteOrder() {
+  if (!orderToDelete.value) return;
+
+  try {
+    deleteLoading.value = true;
+    await orderService.deleteOrder(orderToDelete.value._id);
+    await loadOrders();
+    showSuccessMessage("Commande supprimée avec succès");
+  } catch (error) {
+    showErrorMessage("Erreur lors de la suppression de la commande");
+  } finally {
+    deleteLoading.value = false;
+    showDeleteConfirm.value = false;
+    orderToDelete.value = null;
   }
-  showAddOrder.value = true
 }
 
-function askDeleteOrder(order: any) {
-  orderToDelete.value = order
-  showDeleteConfirm.value = true
-}
+async function saveOrder() {
+  orderForm.value?.validate();
+  showNoProductError.value = form.value.articles.length === 0;
 
-function confirmDeleteOrder() {
-  if (orderToDelete.value) {
-    orders.value = orders.value.filter(o => o.id !== orderToDelete.value.id)
+  if (!formValid.value || showNoProductError.value) return;
+
+  if (
+    !form.value.articles.every(
+      (p) =>
+        p.article && p.quantite > 0 && p.quantite <= getArticleStock(p.article)
+    )
+  ) {
+    return;
   }
-  showDeleteConfirm.value = false
-  orderToDelete.value = null
-}
 
-function isFormValid() {
-  if (!formValid.value) return false
-  if (form.value.productsList.length === 0) return false
-  return form.value.productsList.every(p => p.id && p.qty > 0 && p.qty <= getProductStock(p.id))
-}
+  try {
+    saveLoading.value = true;
 
-function saveOrder() {
-  orderForm.value?.validate()
-  showNoProductError.value = form.value.productsList.length === 0
+    const orderData = {
+      client: form.value.client,
+      statut: form.value.statut,
+      articles: form.value.articles.map((item) => {
+        const article = articles.value.find((a) => a._id === item.article);
+        return {
+          article: item.article,
+          quantite: item.quantite,
+          prixUnitaire: article?.prix || 0,
+        };
+      }),
+      montantTotal: parseFloat(calculatedTotal.value),
+    };
 
-  if (!formValid.value || showNoProductError.value) return
+    if (editedOrder.value) {
+      await orderService.updateOrder(editedOrder.value._id, orderData);
+      showSuccessMessage("Commande modifiée avec succès");
+    } else {
+      await orderService.createOrder(orderData);
+      showSuccessMessage("Commande créée avec succès");
+    }
 
-  if (!form.value.productsList.every(p => p.id && p.qty > 0 && p.qty <= getProductStock(p.id)))
-    return
-
-  const total = updateTotal()
-
-  if (editedOrder.value) {
-    Object.assign(editedOrder.value, { ...form.value, total })
-  } else {
-    orders.value.push({
-      id: Date.now(),
-      number: generateNextOrderNumber(),
-      ...form.value,
-      total
-    })
+    await loadOrders();
+    closeDialog();
+  } catch (error) {
+    showErrorMessage("Erreur lors de l'enregistrement de la commande");
+  } finally {
+    saveLoading.value = false;
   }
-  closeDialog()
 }
 
 const sortedOrders = computed(() => {
-  return [...orders.value].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-})
+  return [...orders.value].sort(
+    (a, b) =>
+      new Date(b.dateCommande).getTime() - new Date(a.dateCommande).getTime()
+  );
+});
 
 function closeDialog() {
-  showAddOrder.value = false
-  editedOrder.value = null
-  form.value = { date: '', status: '', clientId: null, productsList: [] }
-  orderForm.value?.resetValidation()
+  showAddOrder.value = false;
+  editedOrder.value = null;
+  form.value = { statut: "Demandée", client: "", articles: [] };
+  orderForm.value?.resetValidation();
+  showNoProductError.value = false;
+}
+
+function showErrorMessage(message: string) {
+  errorMessage.value = message;
+  showError.value = true;
+}
+
+function showSuccessMessage(message: string) {
+  successMessage.value = message;
+  showSuccess.value = true;
 }
 </script>
 

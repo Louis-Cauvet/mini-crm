@@ -6,7 +6,7 @@ const API_BASE_URL = "http://localhost:3000/api";
 axios.defaults.withCredentials = true;
 
 export interface Article {
-  _id?: string;
+  _id: string;
   nom: string;
   description: string;
   prix: number;
