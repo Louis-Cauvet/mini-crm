@@ -377,7 +377,7 @@ curl http://localhost:3000/api/clients -b cookies.txt
 
 ## 👥 Équipe de Développement
 
-Développé par l'équipe : **AGERON MICHALLON DUPERTHUY CAUVET**
+Développé par l'équipe : **AGERON DIT BLANC Joachim, MICHALLON Lisa, DUPERTHUY Hugo, CAUVET Louis**
 
 ## 📝 License
 
